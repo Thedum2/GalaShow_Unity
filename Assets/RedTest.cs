@@ -8,7 +8,7 @@ public class RedTest : MonoBehaviour
     public float frequency = 1f;
 
     private Vector3 _startPos;
-
+    
     void Start()
     {
         // 시작 위치 저장
