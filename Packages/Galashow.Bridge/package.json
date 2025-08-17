@@ -1,0 +1,8 @@
+{
+  "name": "com.gienecompany.bridge",
+  "displayName": "Galashow.Bridge",
+  "version": "1.0.0",
+  "description": "This is Galashow.Bridge package.",
+  "dependencies": {
+  }
+}
