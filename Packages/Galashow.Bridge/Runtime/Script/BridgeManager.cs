@@ -1,10 +1,11 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
 using Newtonsoft.Json;
 using UnityCommunity.UnitySingleton;
+
 namespace Galashow.Bridge
 {
     public class BridgeManager : PersistentMonoSingleton<BridgeManager>
@@ -12,21 +13,22 @@ namespace Galashow.Bridge
         [Header("Settings")]
         [SerializeField] private float defaultTimeoutSeconds = 10f;
         [SerializeField] private string bridgeGameObjectName = "BridgeManager";
-        
+
         private readonly Dictionary<string, IMessageHandler> _messageHandlers = new();
         private readonly Dictionary<string, PendingRequest> _pendingRequests = new();
-        
+
         public static Action<Message> OnMessageReceived;
         public static Action<Message> OnMessageSent;
 
         private int _idIndex = 0;
 
+        private IBridgeSender _sender;
+
         protected override void OnInitialized()
         {
             base.OnInitialized();
-            
             gameObject.name = bridgeGameObjectName;
-            
+            _sender = new BridgeSender(this);
             RegisterDefaultHandlers();
             StartCoroutine(CheckTimeouts());
             InitializeBridge();
@@ -39,7 +41,6 @@ namespace Galashow.Bridge
 #else
             Util.Log("Running in non-WebGL environment");
 #endif
-            
             MainHandler.Instance.Initialize();
         }
 
@@ -52,8 +53,12 @@ namespace Galashow.Bridge
             {
                 Util.Log($"Handler for route '{route}' already exists. Overwriting...");
             }
-            
+
             _messageHandlers[route] = handler;
+
+            if (handler is BaseMessageHandler baseHandler)
+                baseHandler.__BindSender(_sender);
+
             Util.Log($"Registered handler for route: {route}");
         }
 
@@ -67,13 +72,12 @@ namespace Galashow.Bridge
 
         private void RegisterDefaultHandlers()
         {
-         //   RegisterHandler(new SampleGameHandler());
+            // 필요 시 기본 핸들러 등록
         }
 
         #endregion
 
         #region Message Receiving (React -> Unity)
-        
         public void ReceiveMessage(string jsonMessage)
         {
             try
@@ -91,7 +95,6 @@ namespace Galashow.Bridge
                     return;
                 }
 
-                Util.Log($"Recieved message from React: {jsonMessage}");
                 HandleIncomingMessage(message);
             }
             catch (Exception e)
@@ -99,12 +102,12 @@ namespace Galashow.Bridge
                 Util.Log($"Failed to parse incoming message: {e.Message}\nRaw message: {jsonMessage}");
             }
         }
-
         private void HandleIncomingMessage(Message message)
         {
             string routeName = Util.ParseRoute(message.route).routeName;
             Util.Log($"Received {message.direction} message: {message.type} - {message.route}");
             OnMessageReceived?.Invoke(message);
+
             switch (message.type?.ToUpper())
             {
                 case "REQ":
@@ -121,24 +124,24 @@ namespace Galashow.Bridge
                     break;
             }
         }
-
-        private void HandleRequest(string route ,Message message)
+        private void HandleRequest(string route, Message message)
         {
             if (_messageHandlers.TryGetValue(route, out var handler))
             {
-                handler.HandleRequest(message, 
+                handler.HandleRequest(
+                    message,
                     onSuccess: (data) => SendAcknowledge(message.id, message.route, true, data),
-                    onError: (error) => SendAcknowledge(message.id, message.route, false, null, error));
+                    onError: (error) => SendAcknowledge(message.id, message.route, false, null, error)
+                );
             }
             else
             {
                 string error = $"No handler found for route: {message.route}";
-                Util.Log($"{error}");
+                Util.Log(error);
                 SendAcknowledge(message.id, message.route, false, null, error);
             }
         }
-
-        private void HandleAcknowledge(string route ,Message message)
+        private void HandleAcknowledge(string route, Message message)
         {
             if (_pendingRequests.Remove(message.id, out var pending))
             {
@@ -156,8 +159,7 @@ namespace Galashow.Bridge
                 Util.Log($"Received ACK for unknown request ID: {message.id}");
             }
         }
-
-        private void HandleNotify(string route ,Message message)
+        private void HandleNotify(string route, Message message)
         {
             if (_messageHandlers.TryGetValue(route, out var handler))
             {
@@ -172,17 +174,17 @@ namespace Galashow.Bridge
         #endregion
 
         #region Message Sending (Unity -> React)
-
-        public void SendRequest(string route, object data = null, 
-            Action<Message> onSuccess = null, 
-            Action<string> onError = null, 
-            Action onTimeout = null, 
+        
+        private void SendRequestInternal(string route, object data = null,
+            Action<Message> onSuccess = null,
+            Action<string> onError = null,
+            Action onTimeout = null,
             float timeoutSeconds = -1f)
         {
             if (timeoutSeconds < 0) timeoutSeconds = defaultTimeoutSeconds;
-            
+
             var message = CreateMessage(MessageType.REQ, MessageDirection.U2R, route, data, true);
-            
+
             _pendingRequests[message.id] = new PendingRequest
             {
                 requestId = message.id,
@@ -192,33 +194,26 @@ namespace Galashow.Bridge
                 onError = onError,
                 onTimeout = onTimeout
             };
-            
+
             SendMessageToReactInternal(message);
         }
-
-        public void SendNotify(string route, object data = null)
+        private void SendNotifyInternal(string route, object data = null)
         {
             var message = CreateMessage(MessageType.NTY, MessageDirection.U2R, route, data, true);
             SendMessageToReactInternal(message);
         }
-
         private void SendAcknowledge(string requestId, string route, bool success, object data, string error = null)
         {
             var message = CreateMessage(MessageType.ACK, MessageDirection.U2R, route, data, success, requestId);
             if (!success) message.error = error;
             SendMessageToReactInternal(message);
         }
-
         private void SendMessageToReactInternal(Message message)
         {
             try
             {
-                string json = JsonConvert.SerializeObject(message, Formatting.None, 
-                    new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-                
-                Util.Log($"Sending to React: {message.type} - {message.route}");
-
-                WebGLBridge.SendToReact(json);                
+                string json = JsonConvert.SerializeObject(message);
+                WebGLBridge.Send(json);
                 OnMessageSent?.Invoke(message);
             }
             catch (Exception e)
@@ -229,13 +224,37 @@ namespace Galashow.Bridge
 
         #endregion
 
-        #region Utility Methods
+        #region Bridge Sender
 
-        private Message CreateMessage(MessageType type, MessageDirection direction, 
+        private sealed class BridgeSender : IBridgeSender
+        {
+            private readonly BridgeManager _mgr;
+            public BridgeSender(BridgeManager mgr) => _mgr = mgr;
+
+            public void Request(string route, object data = null,
+                Action<Message> onSuccess = null,
+                Action<string> onError = null,
+                Action onTimeout = null,
+                float timeoutSeconds = -1f)
+            {
+                _mgr.SendRequestInternal(route, data, onSuccess, onError, onTimeout, timeoutSeconds);
+            }
+
+            public void Notify(string route, object data = null)
+            {
+                _mgr.SendNotifyInternal(route, data);
+            }
+        }
+
+        #endregion
+
+        #region Utilities & State
+
+        private Message CreateMessage(MessageType type, MessageDirection direction,
             string route, object data, bool ok, string customId = null)
         {
             string messageId = customId ?? GenerateMessageId(direction);
-            
+
             return new Message
             {
                 ok = ok,
@@ -260,65 +279,55 @@ namespace Galashow.Bridge
         private IEnumerator CheckTimeouts()
         {
             var waitForSeconds = new WaitForSeconds(1f);
-            
+
             while (true)
             {
                 yield return waitForSeconds;
-                
+
                 var currentTime = DateTime.UtcNow;
                 var expiredRequests = _pendingRequests.Values
                     .Where(req => (currentTime - req.sentTime).TotalSeconds > req.timeoutSeconds)
                     .ToList();
-                
+
                 foreach (var expired in expiredRequests)
                 {
-                    _pendingRequests.Remove(expired.requestId);
-                    expired.onTimeout?.Invoke();
-                    Util.Log($"Request timeout: {expired.requestId}");
+                    if (_pendingRequests.Remove(expired.requestId, out _))
+                    {
+                        expired.onTimeout?.Invoke();
+                        Util.Log($"Request timeout: {expired.requestId}");
+                    }
                 }
             }
         }
 
         #endregion
 
-        #region Public API Methods
+        #region Public API
 
         public bool IsConnected()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
             return WebGLBridge.IsBridgeReady();
 #else
-            return false;
-            
+            return true;
 #endif
         }
 
-        public int GetPendingRequestCount()
-        {
-            return _pendingRequests.Count;
-        }
+        public int GetPendingRequestCount() => _pendingRequests.Count;
 
         public void ClearAllPendingRequests()
         {
             var requests = _pendingRequests.Values.ToList();
             _pendingRequests.Clear();
-            
-            foreach (var request in requests)
+
+            foreach (var req in requests)
             {
-                request.onTimeout?.Invoke();
+                try { req.onTimeout?.Invoke(); } catch { /* ignore */ }
             }
         }
 
-        public string[] GetRegisteredRoutes()
-        {
-            return _messageHandlers.Keys.ToArray();
-        }
+        public bool HasHandler(string route) => _messageHandlers.ContainsKey(route);
 
-        public bool HasHandler(string route)
-        {
-            return _messageHandlers.ContainsKey(route);
-        }
-        
         #endregion
 
         public override void ClearSingleton()
