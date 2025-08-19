@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 namespace Galashow.Bridge
 {
@@ -15,6 +17,24 @@ namespace Galashow.Bridge
                 : (route, string.Empty);
         }
 
+        public static bool TryTo<T>(object raw, out T model, out string error)
+        {
+            try
+            {
+                if (raw is T t) { model = t; error = null; return true; }
+                var token = raw as JToken ?? JToken.FromObject(raw);
+                model = token.ToObject<T>();
+                error = null;
+                return true;
+            }
+            catch (Exception e)
+            {
+                model = default;
+                error = e.Message;
+                return false;
+            }
+        }
+        
         public static void Log(string log)
         {
             var callerType = new System.Diagnostics.StackTrace().GetFrame(1)?.GetMethod()?.DeclaringType?.Name ?? "Unknown";

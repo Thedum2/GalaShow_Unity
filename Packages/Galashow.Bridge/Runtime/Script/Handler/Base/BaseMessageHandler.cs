@@ -34,10 +34,14 @@ namespace Galashow.Bridge
         protected virtual string BuildRoute(string action)
             => string.IsNullOrEmpty(action) ? GetRoute() : $"{GetRoute()}.{action}";
 
-        public abstract void HandleRequest(Message message, Action<object> onSuccess, Action<string> onError);
+        public virtual void HandleRequest(Message message, Action<object> onSuccess, Action<string> onError)
+        {
+            
+        }
 
         public virtual void HandleNotify(Message message)
         {
+            
         }
     }
 }

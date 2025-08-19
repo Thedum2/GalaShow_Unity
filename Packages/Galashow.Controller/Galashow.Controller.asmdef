@@ -1,0 +1,17 @@
+{
+    "name": "Galashow.Controller",
+    "rootNamespace": "",
+    "references": [
+        "GUID:de184cc3ec226704b92a2445e8648cf3",
+        "GUID:e435a9eb6710d334c97375b1c1d6cc5d"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

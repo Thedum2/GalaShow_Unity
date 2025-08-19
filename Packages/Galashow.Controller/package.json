@@ -1,0 +1,8 @@
+{
+  "name": "com.gienecompany.controller",
+  "displayName": "Galashow.Controller",
+  "version": "1.0.0",
+  "description": "This is Galashow.Controller package.",
+  "dependencies": {
+  }
+}

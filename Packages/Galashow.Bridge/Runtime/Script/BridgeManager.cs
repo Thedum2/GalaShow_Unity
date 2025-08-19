@@ -304,6 +304,11 @@ namespace Galashow.Bridge
 
         #region Public API
 
+        public T GetHandler<T>(string route) where T : class, IMessageHandler
+        {
+            return _messageHandlers.TryGetValue(route, out var h) ? h as T : null;
+        }
+        
         public bool IsConnected()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
