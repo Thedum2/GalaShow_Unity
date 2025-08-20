@@ -15,7 +15,6 @@ namespace Galashow.Bridge
         public override void InitializeSingleton()
         {
             base.InitializeSingleton();
-            Initialize();
         }
     }
 }

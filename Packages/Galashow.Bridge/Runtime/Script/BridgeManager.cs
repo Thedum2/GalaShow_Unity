@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
@@ -105,7 +105,7 @@ namespace Galashow.Bridge
         private void HandleIncomingMessage(Message message)
         {
             string routeName = Util.ParseRoute(message.route).routeName;
-            Util.Log($"Received {message.direction} message: {message.type} - {message.route}");
+            Util.Log($"Received message: {message.type} - {message.route} - {message.data.ToString()}");
             OnMessageReceived?.Invoke(message);
 
             switch (message.type?.ToUpper())
@@ -131,14 +131,14 @@ namespace Galashow.Bridge
                 handler.HandleRequest(
                     message,
                     onSuccess: (data) => SendAcknowledge(message.id, message.route, true, data),
-                    onError: (error) => SendAcknowledge(message.id, message.route, false, null, error)
+                    onError: (error) => SendAcknowledge(message.id, message.route, false, null)
                 );
             }
             else
             {
                 string error = $"No handler found for route: {message.route}";
                 Util.Log(error);
-                SendAcknowledge(message.id, message.route, false, null, error);
+                SendAcknowledge(message.id, message.route, false, null);
             }
         }
         private void HandleAcknowledge(string route, Message message)
@@ -151,7 +151,7 @@ namespace Galashow.Bridge
                 }
                 else
                 {
-                    pending.onError?.Invoke(message.error ?? "Unknown error");
+                    pending.onError?.Invoke("Unknown error");
                 }
             }
             else
@@ -202,10 +202,9 @@ namespace Galashow.Bridge
             var message = CreateMessage(MessageType.NTY, MessageDirection.U2R, route, data, true);
             SendMessageToReactInternal(message);
         }
-        private void SendAcknowledge(string requestId, string route, bool success, object data, string error = null)
+        private void SendAcknowledge(string requestId, string route, bool success, object data)
         {
             var message = CreateMessage(MessageType.ACK, MessageDirection.U2R, route, data, success, requestId);
-            if (!success) message.error = error;
             SendMessageToReactInternal(message);
         }
         private void SendMessageToReactInternal(Message message)
@@ -261,9 +260,7 @@ namespace Galashow.Bridge
                 type = type.ToString(),
                 route = route,
                 id = messageId,
-                data = data,
-                direction = direction.ToString(),
-                status = ok ? MessageStatus.success.ToString() : MessageStatus.error.ToString()
+                data = data
             };
         }
 
@@ -312,7 +309,7 @@ namespace Galashow.Bridge
         public bool IsConnected()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
-            return WebGLBridge.IsReactBridgeReady();
+            return WebGLBridge.IsReactBridgeReady()==1;
 #else
             return true;
 #endif

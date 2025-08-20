@@ -32,7 +32,7 @@ namespace Galashow.Bridge
             _bridge?.Notify(BuildRoute(action), data);
         }
         protected virtual string BuildRoute(string action)
-            => string.IsNullOrEmpty(action) ? GetRoute() : $"{GetRoute()}.{action}";
+            => string.IsNullOrEmpty(action) ? GetRoute() : $"{GetRoute()}_{action}";
 
         public virtual void HandleRequest(Message message, Action<object> onSuccess, Action<string> onError)
         {

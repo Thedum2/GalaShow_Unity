@@ -2,16 +2,11 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Galashow.Controller;
-using Galashow.Bridge.Model;
 using System;
 using System.Linq;
-using Newtonsoft.Json;
 
 public class InterfaceSampleManager : MonoBehaviour
 {
-    [SerializeField] private TMP_Dropdown route_dropdown;
-    [SerializeField] private TMP_InputField data_inputField;
-
     [SerializeField] private Button ChangeBorderColor_B;
     [SerializeField] private Button CalculateMultiply_B;
 
@@ -30,19 +25,16 @@ public class InterfaceSampleManager : MonoBehaviour
     
     private void OnChangeBorderColorButtonClicked()
     {
-        SampleManager.Instance.SendChangeBorderColor(data_inputField.text);
+        SampleManager.Instance.SendChangeBorderColor("#FF0000");
     }
     private void OnCalculateMultiplyButtonClicked()
     {
         try
         {
-            int[] numbers = data_inputField.text.Split('_', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();
-            int a = numbers[0];
-            int b = numbers[1];
-            SampleManager.Instance.SendCalculateMultiply(a, b, 
+            SampleManager.Instance.SendCalculateMultiply(5,7, 
                 (r) =>
                 {
-                    data_inputField.text = r.ToString();
+                    Debug.LogError($"아싸성공");
                 },
                 () =>
                 {

@@ -8,17 +8,10 @@ namespace Galashow.Bridge
     public static class WebGLBridge
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
-        [DllImport("__Internal")]
-        public static extern void SendMessageToReact(string jsonMessage);
-
-        [DllImport("__Internal")]
-        public static extern bool IsReactBridgeReady();
-
-        [DllImport("__Internal")]
-        public static extern void InitializeReactBridge();
-
-        [DllImport("__Internal")]
-        public static extern void InitializeReactBridgeRuntime();
+        [DllImport("__Internal")] public static extern void SendMessageToReact(string jsonMessage);
+        [DllImport("__Internal")] public static extern int IsReactBridgeReady();
+        [DllImport("__Internal")] public static extern void InitializeReactBridge();
+        [DllImport("__Internal")] public static extern void InitializeReactBridgeRuntime();
 #else
         
         public static void SendMessageToReact(string jsonMessage)
@@ -26,10 +19,10 @@ namespace Galashow.Bridge
             Debug.Log($"[WebGLBridge:Editor] Send to React: {jsonMessage}");
         }
 
-        public static bool IsReactBridgeReady()
+        public static int IsReactBridgeReady()
         {
             Debug.Log($"[WebGLBridge:Editor] Send to React");
-            return true;
+            return 1;
         }
 
         public static void InitializeReactBridge()

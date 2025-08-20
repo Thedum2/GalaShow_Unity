@@ -34,10 +34,7 @@ namespace Galashow.Bridge
         public string route;
         public string id;
         public object data;
-        public long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        public string direction;
-        public string status;
-        public string error;
+        public string timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
     }
 
     [Serializable]
