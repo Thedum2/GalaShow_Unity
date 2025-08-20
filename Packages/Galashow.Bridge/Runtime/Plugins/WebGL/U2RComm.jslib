@@ -47,7 +47,7 @@ mergeInto(LibraryManager.library, {
             window.parent !== window || 
             window.unityMessageHandler ||
             document.querySelector('[data-react-app]') !== null
-        ) ? 1 : 0;
+        ) ? true:false;
     },
     
     // React와의 브리지 초기화

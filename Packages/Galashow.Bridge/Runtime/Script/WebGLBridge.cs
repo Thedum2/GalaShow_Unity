@@ -12,7 +12,7 @@ namespace Galashow.Bridge
         public static extern void SendMessageToReact(string jsonMessage);
 
         [DllImport("__Internal")]
-        public static extern int IsReactBridgeReady();
+        public static extern bool IsReactBridgeReady();
 
         [DllImport("__Internal")]
         public static extern void InitializeReactBridge();
@@ -20,13 +20,17 @@ namespace Galashow.Bridge
         [DllImport("__Internal")]
         public static extern void InitializeReactBridgeRuntime();
 #else
-        // Editor/Non-WebGL 스텁
+        
         public static void SendMessageToReact(string jsonMessage)
         {
             Debug.Log($"[WebGLBridge:Editor] Send to React: {jsonMessage}");
         }
 
-        public static int IsReactBridgeReady() => 1;
+        public static bool IsReactBridgeReady()
+        {
+            Debug.Log($"[WebGLBridge:Editor] Send to React");
+            return true;
+        }
 
         public static void InitializeReactBridge()
         {
@@ -53,22 +57,6 @@ namespace Galashow.Bridge
             catch (Exception e)
             {
                 Util.LogError($"[WebGLBridge] Init failed: {e}");
-            }
-        }
-
-        /// <summary>
-        /// 브릿지 준비 여부 (IsReactBridgeReady() != 0)
-        /// </summary>
-        public static bool IsReady()
-        {
-            try
-            {
-                return IsReactBridgeReady() != 0;
-            }
-            catch (Exception e)
-            {
-                Util.LogError($"[WebGLBridge] IsReady check failed: {e}");
-                return false;
             }
         }
 

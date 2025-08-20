@@ -312,7 +312,7 @@ namespace Galashow.Bridge
         public bool IsConnected()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
-            return WebGLBridge.IsBridgeReady();
+            return WebGLBridge.IsReactBridgeReady();
 #else
             return true;
 #endif

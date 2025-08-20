@@ -3,7 +3,6 @@ using Galashow.Bridge;
 using Galashow.Bridge.Model;
 using UnityCommunity.UnitySingleton;
 using UnityEngine;
-using Request = UnityEditor.PackageManager.Requests.Request;
 
 namespace Galashow.Controller
 {
