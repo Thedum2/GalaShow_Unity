@@ -8,39 +8,32 @@ namespace Galashow.Bridge.Model
 
         public class R2U
         {
-            //R2U_SampleManager_CalculateAdd_REQ
-            public class CalculateAdd
+            //R2U_GameManager_Initialize_REQ
+            public class Initialize
             {
-                [JsonProperty("a")] public int a { get; set; }
-                [JsonProperty("b")] public int b { get; set; }
-
-                public CalculateAdd(int a, int b)
-                {
-                    this.a = a;
-                    this.b = b;
-                }
+                [JsonProperty("playerName")]
+                public string PlayerName { get; set; }
+                
+                [JsonProperty("sessionId")]
+                public string SessionId { get; set; }
+            }
+            
+            //R2U_SimulationManager_PostStarted_REQ
+            public class PostStarted
+            {
+                [JsonProperty("resultChoiceId")]
+                public int ResultChoiceId { get; set; }
             }
         }
+
         #endregion
 
         #region U2R
 
         public class U2R
         {
-            //U2R_SampleManager_CalculateMultiply_REQ
-            public class CalculateMultiply
-            {
-                [JsonProperty("a")] public int a { get; set; }
-                [JsonProperty("b")] public int b { get; set; }
-
-                public CalculateMultiply(int a, int b)
-                {
-                    this.a = a;
-                    this.b = b;
-                }
-            }
         }
-        
+
         #endregion
     }
 }

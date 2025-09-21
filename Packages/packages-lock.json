@@ -6,8 +6,14 @@
       "source": "embedded",
       "dependencies": {}
     },
-    "com.gienecompany.controller": {
-      "version": "file:Galashow.Controller",
+    "com.gienecompany.common": {
+      "version": "file:Galashow.Common",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
+    "com.gienecompany.trolley": {
+      "version": "file:Galashow.Trolley",
       "depth": 0,
       "source": "embedded",
       "dependencies": {}

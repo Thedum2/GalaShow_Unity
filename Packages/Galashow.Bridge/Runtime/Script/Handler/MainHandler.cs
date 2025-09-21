@@ -4,12 +4,12 @@ namespace Galashow.Bridge
 {
     public class MainHandler : PersistentMonoSingleton<MainHandler>
     {
-        public SampleHandler SampleHandler { get; private set; }
+        //public SampleHandler SampleHandler { get; private set; }
 
         public void Initialize()
         {
-            SampleHandler = new SampleHandler();
-            BridgeManager.Instance.RegisterHandler(SampleHandler);
+            //SampleHandler = new SampleHandler();
+            //BridgeManager.Instance.RegisterHandler(SampleHandler);
         }
 
         public override void InitializeSingleton()

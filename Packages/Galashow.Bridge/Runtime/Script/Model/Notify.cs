@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Galashow.Bridge.Model
 {
@@ -8,11 +9,49 @@ namespace Galashow.Bridge.Model
 
         public class R2U
         {
-            //R2U_SampleManager_ChangeSphereColor_NTY
-            public class ChangeSphereColor
+            //R2U_SimulationManager_Selected_NTY
+            public class Selected
             {
-                [JsonProperty("color")]
-                public string Color { get; set; }
+                [JsonProperty("index")] 
+                public int Index { get; set; }
+                
+                [JsonProperty("user")] 
+                public List<UserData> User { get; set; }
+                
+                [JsonProperty("title")] 
+                public string Title { get; set; }
+                
+                [JsonProperty("choices")] 
+                public List<Choice> Choices { get; set; }
+                public class Choice
+                {
+                    [JsonProperty("choiceId")] 
+                    public int ChoiceId { get; set; }
+                    
+                    [JsonProperty("text")] 
+                    public string Text { get; set; }
+                    
+                    [JsonProperty("imageUrl")] 
+                    public string ImageUrl { get; set; }
+                }
+                public class UserData
+                {
+                    [JsonProperty("id")] 
+                    public int ID { get; set; }
+                    
+                    [JsonProperty("nickname")] 
+                    public string Nickname { get; set; }
+                }
+            }
+
+            //R2U_SimulationManager_SelectEvent_NTY
+            public class SelectEvent
+            {
+                [JsonProperty("userIndex")] 
+                public float UserIndex { get; set; }
+                
+                [JsonProperty("select")] 
+                public string Select { get; set; }
             }
         }
         #endregion
@@ -21,16 +60,14 @@ namespace Galashow.Bridge.Model
 
         public class U2R
         {
-            //U2R_SampleManager_ChangeBorderColor_NTY
-            public class ChangeBorderColor
+            //U2R_GameManager_LoadingProgress_NTY
+            public class LoadingProgress
             {
-                [JsonProperty("color")]
-                public string Color { get; set; }
-
-                public ChangeBorderColor(string color)
-                {
-                    Color = color;
-                }
+                [JsonProperty("progress")] 
+                public float Progress { get; set; }
+                
+                [JsonProperty("currentTask")] 
+                public string CurrentTask { get; set; }
             }
         }
         

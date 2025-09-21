@@ -8,12 +8,7 @@ namespace Galashow.Bridge.Model
 
         public class R2U
         {
-            //R2U_SampleManager_CalculateMultiply_ACK
-            public class CalculateMultiply
-            {
-                [JsonProperty("result")]
-                public int Result { get; set; }
-            }
+            
         }
         #endregion
 
@@ -21,11 +16,14 @@ namespace Galashow.Bridge.Model
 
         public class U2R
         {
-            //U2R_SampleManager_CalculateAdd_ACK
-            public class CalculateAdd
+            //U2R_GameManager_Initialize_ACK
+            public class Initialize
             {
-                [JsonProperty("result")]
-                public int Result { get; set; }
+                [JsonProperty("gameVersion")]
+                public string GameVersion { get; set; }
+                
+                [JsonProperty("maxPlayers")]
+                public int MaxPlayers { get; set; }
             }
         }
         
