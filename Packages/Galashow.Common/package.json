@@ -1,0 +1,8 @@
+﻿{
+  "name": "com.gienecompany.common",
+  "displayName": "Galashow.Common",
+  "version": "1.0.0",
+  "description": "This is Galashow.Common package.",
+  "dependencies": {
+  }
+}

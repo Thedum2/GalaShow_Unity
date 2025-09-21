@@ -1,0 +1,8 @@
+﻿{
+  "name": "com.gienecompany.trolley",
+  "displayName": "Galashow.Trolley",
+  "version": "1.0.0",
+  "description": "This is Galashow.Trolley package.",
+  "dependencies": {
+  }
+}
