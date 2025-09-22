@@ -51,7 +51,7 @@ namespace Galashow.Bridge.Model
                 public float UserIndex { get; set; }
                 
                 [JsonProperty("select")] 
-                public string Select { get; set; }
+                public int Select { get; set; }
             }
         }
         #endregion
@@ -68,6 +68,12 @@ namespace Galashow.Bridge.Model
                 
                 [JsonProperty("currentTask")] 
                 public string CurrentTask { get; set; }
+
+                public LoadingProgress(float progress, string currentTask)
+                {
+                    Progress = progress;
+                    CurrentTask = currentTask;
+                }
             }
         }
         
