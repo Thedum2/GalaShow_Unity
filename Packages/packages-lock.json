@@ -1,18 +1,30 @@
 {
   "dependencies": {
-    "com.gienecompany.bridge": {
+    "com.galashow.bridge": {
       "version": "file:Galashow.Bridge",
       "depth": 0,
       "source": "embedded",
       "dependencies": {}
     },
-    "com.gienecompany.common": {
+    "com.galashow.common": {
       "version": "file:Galashow.Common",
       "depth": 0,
       "source": "embedded",
       "dependencies": {}
     },
-    "com.gienecompany.trolley": {
+    "com.galashow.core": {
+      "version": "file:Galashow.Core",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
+    "com.galashow.editor": {
+      "version": "file:Galashow.Editor",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
+    "com.galashow.trolley": {
       "version": "file:Galashow.Trolley",
       "depth": 0,
       "source": "embedded",

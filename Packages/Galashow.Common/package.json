@@ -1,8 +1,8 @@
-﻿{
-  "name": "com.gienecompany.common",
-  "displayName": "Galashow.Common",
-  "version": "1.0.0",
-  "description": "This is Galashow.Common package.",
-  "dependencies": {
-  }
+{
+  "name": "com.galashow.common",
+  "version": "0.1.0",
+  "displayName": "Galashow Common",
+  "description": "Common functionality services for Galashow",
+  "unity": "2022.3",
+  "dependencies": {}
 }

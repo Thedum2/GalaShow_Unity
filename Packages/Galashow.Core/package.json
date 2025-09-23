@@ -1,0 +1,8 @@
+{
+  "name": "com.galashow.core",
+  "version": "0.1.0",
+  "displayName": "Galashow Core",
+  "description": "Core infrastructure for Galashow",
+  "unity": "2022.3",
+  "dependencies": {}
+}

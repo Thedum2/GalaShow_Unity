@@ -1,8 +1,8 @@
-﻿{
-  "name": "com.gienecompany.trolley",
-  "displayName": "Galashow.Trolley",
-  "version": "1.0.0",
-  "description": "This is Galashow.Trolley package.",
-  "dependencies": {
-  }
+{
+  "name": "com.galashow.trolley",
+  "version": "0.1.0",
+  "displayName": "Galashow Trolley",
+  "description": "Individual scenario (controller/resource/production preset) for Galashow",
+  "unity": "2022.3",
+  "dependencies": {}
 }

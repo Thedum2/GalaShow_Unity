@@ -1,8 +1,8 @@
 {
-    "name": "Galashow.Common",
-    "rootNamespace": "Galashow.Common",
+    "name": "Galashow.Editor",
+    "rootNamespace": "Galashow.Editor",
     "references": [],
-    "includePlatforms": [],
+    "includePlatforms": ["Editor"],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

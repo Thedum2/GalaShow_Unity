@@ -1,6 +1,6 @@
 {
-    "name": "Galashow.Common",
-    "rootNamespace": "Galashow.Common",
+    "name": "Galashow.Core",
+    "rootNamespace": "Galashow.Core",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
