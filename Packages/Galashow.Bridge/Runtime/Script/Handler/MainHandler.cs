@@ -1,4 +1,4 @@
-﻿using UnityCommunity.UnitySingleton;
+﻿using Galashow.Core;
 
 namespace Galashow.Bridge
 {

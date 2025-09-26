@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
+using Galashow.Core;
 using UnityEngine;
 using Newtonsoft.Json;
-using UnityCommunity.UnitySingleton;
 
 namespace Galashow.Bridge
 {
