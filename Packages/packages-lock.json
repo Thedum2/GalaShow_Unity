@@ -172,13 +172,6 @@
       },
       "url": "https://packages.unity.com"
     },
-    "com.unitycommunity.unitysingleton": {
-      "version": "https://github.com/UnityCommunity/UnitySingleton.git",
-      "depth": 0,
-      "source": "git",
-      "dependencies": {},
-      "hash": "9416bf62bb893a1d416ff3c5ef83275164373f11"
-    },
     "com.unity.modules.ai": {
       "version": "1.0.0",
       "depth": 0,
