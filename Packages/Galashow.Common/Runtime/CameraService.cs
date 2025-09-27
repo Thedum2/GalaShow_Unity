@@ -1,8 +1,9 @@
 using Galashow.Core;
+using UnityEngine;
 
 namespace Galashow.Common
 {
-    public class CameraService : PersistentMonoSingleton<CameraService>
+    public class CameraService : MonoBehaviour  
     {
         public void PrepareForRound(object round)
         {

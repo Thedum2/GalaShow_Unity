@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Galashow.Bridge.Model;
+using Galashow.Core;
 
 namespace Galashow.Bridge
 {
@@ -12,7 +13,10 @@ namespace Galashow.Bridge
 
         public void AddPort(IGamePort port)
         {
-            if (port != null && !_ports.Contains(port)) _ports.Add(port);
+            if (port != null && !_ports.Contains(port))
+            {
+                _ports.Add(port);
+            }
         }
 
         public void RemovePort(IGamePort port)
@@ -40,7 +44,7 @@ namespace Galashow.Bridge
                     _ports.ForEach(p => p.R2U_GameManager_Ended_NTY());
                     break;
                 default:
-                    Util.LogWarning($"[GameHandler] Unknown NTY action '{action}'");
+                    GLog.Debug($"[GameHandler] Unknown NTY action '{action}'");
                     break;
             }
         }
@@ -67,7 +71,7 @@ namespace Galashow.Bridge
                     bool replied = false;
                     void Reply(Acknowledge.U2R.Initialize data)
                     {
-                        if (replied) { Util.LogWarning($"[GameHandler] duplicate reply ignored"); return; }
+                        if (replied) { GLog.Debug($"[GameHandler] duplicate reply ignored"); return; }
                         replied = true;
                         onSuccess?.Invoke(data);
                     }

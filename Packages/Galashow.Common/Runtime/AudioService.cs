@@ -1,8 +1,9 @@
 using Galashow.Core;
+using UnityEngine;
 
 namespace Galashow.Common
 {
-    public class AudioService : PersistentMonoSingleton<AudioService>
+    public class AudioService : MonoBehaviour
     {
         public void PrepareForRound(object round)
         {

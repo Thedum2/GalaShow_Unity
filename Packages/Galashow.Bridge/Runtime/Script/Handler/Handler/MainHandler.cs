@@ -1,8 +1,9 @@
 ﻿using Galashow.Core;
+using UnityEngine;
 
 namespace Galashow.Bridge
 {
-    public class MainHandler : PersistentMonoSingleton<MainHandler>
+    public class MainHandler
     {
         private SimulationHandler SimulationHandler { get; set; }
         private GameHandler GameHandler { get; set; }
@@ -11,9 +12,6 @@ namespace Galashow.Bridge
         {
             SimulationHandler = new SimulationHandler();
             GameHandler = new GameHandler();
-            
-            BridgeManager.Instance.RegisterHandler(SimulationHandler);
-            BridgeManager.Instance.RegisterHandler(GameHandler);
         }
     }
 }

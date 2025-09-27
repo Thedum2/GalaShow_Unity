@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Galashow.Common
 {
     public enum IssPhase { Idle, Init, Pre, Select, Post, End }
-
+    
     [DefaultExecutionOrder(-5000)]
     public sealed class IssDirector : PersistentMonoSingleton<IssDirector>, IGamePort, ISimulationPort
     {
@@ -17,7 +17,6 @@ namespace Galashow.Common
         
         [Header("Durations (seconds)")]
         [Min(0)] public float preSeconds    = 25f;
-        [Min(0)] public float selectSeconds = 12f;
         [Min(0)] public float postSeconds   = 15f;
         
         [Header("Services (auto-find if null)")]
@@ -36,19 +35,21 @@ namespace Galashow.Common
 
         protected override void OnInitializing()
         {
-            DontDestroyOnLoad(gameObject);
-
+            InitDirector();
+        }
+        public void InitDirector()
+        {
             _gameHandler = BridgeManager.Instance.GetHandler<GameHandler>("GameManager");
             _gameHandler?.AddPort(this);
             
             _simulationHandler = BridgeManager.Instance.GetHandler<SimulationHandler>("SimulationManager");
             _simulationHandler?.AddPort(this);
-            
-            audioService  ??= AudioService.Instance;
-            cameraService ??= CameraService.Instance;
-            spaceService  ??= SpaceService.Instance;
-            uiService     ??= UIService.Instance;
-            visualService ??= VisualService.Instance;
+
+            audioService ??= GetComponent<AudioService>();
+            cameraService ??= GetComponent<CameraService>();
+            spaceService  ??= GetComponent<SpaceService>();
+            uiService     ??= GetComponent<UIService>();
+            visualService ??= GetComponent<VisualService>();
         }
 
         void NewRoundToken() => _roundToken = new object();
@@ -258,12 +259,7 @@ namespace Galashow.Common
             audioService?.Duck(true);
             uiService?.ShowSelectionPrompt(true);
 
-            float seconds = selectSeconds;
-            TaskRunner.Instance.Every(1f, () => uiService?.SetCountdown(seconds = Mathf.Max(0, seconds - 1f)), owner: _roundToken, duration: selectSeconds + 0.1f, unscaled: true);
-            TaskRunner.Instance.Delay(selectSeconds, () =>
-            {
-                uiService?.ShowSelectionPrompt(false);
-            }, owner: _roundToken, unscaled: true);
+            // 타이머 로직 제거. React의 PostStarted_REQ를 무기한 대기합니다。
         }
 
         void HandleSelectEvent(Notify.R2U.SelectEvent ev)

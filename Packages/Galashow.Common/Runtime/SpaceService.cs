@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Galashow.Common
 {
-    public class SpaceService : PersistentMonoSingleton<SpaceService>
+    public class SpaceService : MonoBehaviour
     {
         public void PrepareForRound(object round)
         {

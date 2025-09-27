@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Galashow.Bridge.Model;
+using Galashow.Core;
 using Newtonsoft.Json;
 
 namespace Galashow.Bridge
@@ -36,7 +37,7 @@ namespace Galashow.Bridge
                     if (Util.TryTo<Notify.R2U.Selected>(message.data, out var selectedData, out var err1))
                         _ports.ForEach(p => p.R2U_SimulationManager_Selected_NTY(selectedData));
                     else
-                        Util.LogWarning($"[SimulationHandler] bad payload for {action}: {err1}");
+                        GLog.Debug($"[SimulationHandler] bad payload for {action}: {err1}");
                     break;
                 case "SelectStarted":
                     _ports.ForEach(p => p.R2U_SimulationManager_SelectStarted_NTY());
@@ -45,13 +46,13 @@ namespace Galashow.Bridge
                     if (Util.TryTo<Notify.R2U.SelectEvent>(message.data, out var evtData, out var err2))
                         _ports.ForEach(p => p.R2U_SimulationManager_SelectEvent_NTY(evtData));
                     else
-                        Util.LogWarning($"[SimulationHandler] bad payload for {action}: {err2}");
+                        GLog.Debug($"[SimulationHandler] bad payload for {action}: {err2}");
                     break;
                 case "Ended":
                     _ports.ForEach(p => p.R2U_SimulationManager_Ended_NTY());
                     break;
                 default:
-                    Util.LogWarning($"[SimulationHandler] Unknown NTY action '{action}'");
+                    GLog.Debug($"[SimulationHandler] Unknown NTY action '{action}'");
                     break;
             }
         }
@@ -72,7 +73,7 @@ namespace Galashow.Bridge
                         bool replied = false;
                         void Reply() 
                         {
-                            if (replied) { Util.LogWarning("[SimulationHandler] duplicate reply ignored"); return; }
+                            if (replied) { GLog.Debug("[SimulationHandler] duplicate reply ignored"); return; }
                             replied = true;
                             onSuccess?.Invoke(null);
                         }
@@ -103,7 +104,7 @@ namespace Galashow.Bridge
                         bool replied = false;
                         void Reply()
                         {
-                            if (replied) { Util.LogWarning("[SimulationHandler] duplicate reply ignored"); return; }
+                            if (replied) { GLog.Debug("[SimulationHandler] duplicate reply ignored"); return; }
                             replied = true;
                             onSuccess?.Invoke(null);
                         }

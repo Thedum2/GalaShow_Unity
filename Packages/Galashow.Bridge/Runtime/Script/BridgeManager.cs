@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 
 namespace Galashow.Bridge
 {
+    [DefaultExecutionOrder(-5001)]
     public class BridgeManager : PersistentMonoSingleton<BridgeManager>
     {
         [Header("Settings")]
@@ -23,12 +24,14 @@ namespace Galashow.Bridge
         private int _idIndex = 0;
 
         private IBridgeSender _sender;
+        private MainHandler _mainHandler;
 
         protected override void OnInitialized()
         {
             base.OnInitialized();
             gameObject.name = bridgeGameObjectName;
             _sender = new BridgeSender(this);
+            _mainHandler = new MainHandler();
             RegisterDefaultHandlers();
             StartCoroutine(CheckTimeouts());
             InitializeBridge();
@@ -37,11 +40,11 @@ namespace Galashow.Bridge
         private void InitializeBridge()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
-            Util.Log("WebGL Bridge initialized");
+            WebGLBridge.Init();
 #else
-            Util.Log("Running in non-WebGL environment");
+            GLog.Debug("Running in non-WebGL environment, skipping WebGLBridge.Init()");
 #endif
-            MainHandler.Instance.Initialize();
+            _mainHandler.Initialize();
         }
 
         #region Message Handler Registration
@@ -51,7 +54,7 @@ namespace Galashow.Bridge
             string route = handler.GetRoute();
             if (_messageHandlers.ContainsKey(route))
             {
-                Util.Log($"Handler for route '{route}' already exists. Overwriting...");
+                GLog.Debug($"Handler for route '{route}' already exists. Overwriting...");
             }
 
             _messageHandlers[route] = handler;
@@ -59,14 +62,14 @@ namespace Galashow.Bridge
             if (handler is BaseMessageHandler baseHandler)
                 baseHandler.__BindSender(_sender);
 
-            Util.Log($"Registered handler for route: {route}");
+            GLog.Debug($"Registered handler for route: {route}");
         }
 
         public void UnregisterHandler(string route)
         {
             if (_messageHandlers.Remove(route))
             {
-                Util.Log($"Unregistered handler for route: {route}");
+                GLog.Debug($"Unregistered handler for route: {route}");
             }
         }
 
@@ -81,32 +84,33 @@ namespace Galashow.Bridge
         #region Message Receiving (React -> Unity)
         public void ReceiveMessage(string jsonMessage)
         {
+            GLog.Debug($"<color=magenta>[R2U] {jsonMessage}</color>");
             try
             {
                 if (string.IsNullOrEmpty(jsonMessage))
                 {
-                    Util.Log("Received empty message");
+                    GLog.Debug("Received empty message");
                     return;
                 }
 
                 var message = JsonConvert.DeserializeObject<Message>(jsonMessage);
                 if (message == null)
                 {
-                    Util.Log("Failed to deserialize message");
+                    GLog.Debug("Failed to deserialize message");
                     return;
                 }
-
                 HandleIncomingMessage(message);
             }
             catch (Exception e)
             {
-                Util.Log($"Failed to parse incoming message: {e.Message}\nRaw message: {jsonMessage}");
+                GLog.Debug($"Failed to parse incoming message: {e.Message}\nRaw message: {jsonMessage}");
             }
         }
         private void HandleIncomingMessage(Message message)
         {
             string routeName = Util.ParseRoute(message.route).routeName;
-            Util.Log($"Received message: {message.type} - {message.route} - {message.data.ToString()}");
+            string dataString = message.data == null ? "null" : message.data.ToString();
+            GLog.Debug($"Received message: {message.type} - {message.route} - {dataString}");
             OnMessageReceived?.Invoke(message);
 
             switch (message.type?.ToUpper())
@@ -121,7 +125,7 @@ namespace Galashow.Bridge
                     HandleNotify(routeName, message);
                     break;
                 default:
-                    Util.Log($"[BridgeManager] Unknown message type: {message.type}");
+                    GLog.Debug($"[BridgeManager] Unknown message type: {message.type}");
                     break;
             }
         }
@@ -138,7 +142,7 @@ namespace Galashow.Bridge
             else
             {
                 string error = $"No handler found for route: {message.route}";
-                Util.Log(error);
+                GLog.Debug(error);
                 SendAcknowledge(message.id, message.route, false, null);
             }
         }
@@ -157,7 +161,7 @@ namespace Galashow.Bridge
             }
             else
             {
-                Util.Log($"Received ACK for unknown request ID: {message.id}");
+                GLog.Debug($"Received ACK for unknown request ID: {message.id}");
             }
         }
         private void HandleNotify(string route, Message message)
@@ -168,7 +172,7 @@ namespace Galashow.Bridge
             }
             else
             {
-                Util.Log($"No handler found for notification route: {message.route}");
+                GLog.Debug($"No handler found for notification route: {message.route}");
             }
         }
 
@@ -218,7 +222,7 @@ namespace Galashow.Bridge
             }
             catch (Exception e)
             {
-                Util.Log($"Failed to send message to React: {e.Message}");
+                GLog.Debug($"Failed to send message to React: {e.Message}");
             }
         }
 
@@ -292,7 +296,7 @@ namespace Galashow.Bridge
                     if (_pendingRequests.Remove(expired.requestId, out _))
                     {
                         expired.onTimeout?.Invoke();
-                        Util.Log($"Request timeout: {expired.requestId}");
+                        GLog.Debug($"Request timeout: {expired.requestId}");
                     }
                 }
             }

@@ -79,7 +79,7 @@ namespace Galashow.Core
                 case LogLevel.Trace:
                 case LogLevel.Debug:
                 case LogLevel.Info:
-                    if (ctx) Debug.Log(msg, ctx); else Debug.Log(msg);
+                        if (ctx) Debug.Log(msg, ctx); else Debug.Log(msg);
                     break;
                 case LogLevel.Warn:
                     if (ctx) Debug.LogWarning(msg, ctx); else Debug.LogWarning(msg);
@@ -151,7 +151,8 @@ namespace Galashow.Core
     // -----------------------------
     //  Log Service (Singleton)
     // -----------------------------
-    public sealed class LogService : PersistentMonoSingleton<LogService>
+    [DefaultExecutionOrder(-5002)]
+    public class LogService : PersistentMonoSingleton<LogService>
     {
         [Header("Config")] [SerializeField]
         private LogLevel _minimumLevel = LogLevel.Info;
@@ -171,7 +172,6 @@ namespace Galashow.Core
 
         protected override void OnInitializing()
         {
-            DontDestroyOnLoad(gameObject);
             _memorySink = new MemoryRingSink(_memoryCapacity);
             _sinks.Add(_memorySink);
             if (_useUnityConsole)

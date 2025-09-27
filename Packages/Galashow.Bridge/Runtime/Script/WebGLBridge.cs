@@ -2,6 +2,7 @@
 using UnityEngine;
 using Newtonsoft.Json;
 using System.Runtime.InteropServices;
+using Galashow.Core;
 
 namespace Galashow.Bridge
 {
@@ -16,23 +17,23 @@ namespace Galashow.Bridge
         
         public static void SendMessageToReact(string jsonMessage)
         {
-            Debug.Log($"[WebGLBridge:Editor] Send to React: {jsonMessage}");
+            GLog.Debug($"[WebGLBridge:Editor] Send to React: {jsonMessage}");
         }
 
         public static int IsReactBridgeReady()
         {
-            Debug.Log($"[WebGLBridge:Editor] Send to React");
+            GLog.Debug($"[WebGLBridge:Editor] Send to React");
             return 1;
         }
 
         public static void InitializeReactBridge()
         {
-            Debug.Log("[WebGLBridge:Editor] InitializeReactBridge()");
+            GLog.Debug("[WebGLBridge:Editor] InitializeReactBridge()");
         }
 
         public static void InitializeReactBridgeRuntime()
         {
-            Debug.Log("[WebGLBridge:Editor] InitializeReactBridgeRuntime()");
+            GLog.Debug("[WebGLBridge:Editor] InitializeReactBridgeRuntime()");
         }
 #endif
 
@@ -45,11 +46,11 @@ namespace Galashow.Bridge
             {
                 InitializeReactBridgeRuntime();
                 InitializeReactBridge();
-                Util.Log("[WebGLBridge] Initialization invoked (Runtime -> Bridge).");
+                GLog.Debug("[WebGLBridge] Initialization invoked (Runtime -> Bridge).");
             }
             catch (Exception e)
             {
-                Util.LogError($"[WebGLBridge] Init failed: {e}");
+                GLog.Debug($"[WebGLBridge] Init failed: {e}");
             }
         }
 
@@ -57,7 +58,7 @@ namespace Galashow.Bridge
         {
             if (message == null)
             {
-                Util.Log("[WebGLBridge] Cannot send null message to React");
+                GLog.Debug("[WebGLBridge] Cannot send null message to React");
                 return;
             }
 
@@ -68,7 +69,7 @@ namespace Galashow.Bridge
             }
             catch (Exception e)
             {
-                Util.LogError($"[WebGLBridge] Serialization failed: {e}");
+                GLog.Debug($"[WebGLBridge] Serialization failed: {e}");
             }
         }
 
@@ -76,7 +77,7 @@ namespace Galashow.Bridge
         {
             if (string.IsNullOrEmpty(jsonMessage))
             {
-                Util.Log("[WebGLBridge] Cannot send empty message to React");
+                GLog.Debug("[WebGLBridge] Cannot send empty message to React");
                 return;
             }
 
@@ -84,12 +85,12 @@ namespace Galashow.Bridge
             {
                 SendMessageToReact(jsonMessage);
 #if !UNITY_WEBGL || UNITY_EDITOR
-                Debug.Log($"[WebGLBridge:Editor] {jsonMessage}");
+                GLog.Debug($"<color=magenta>[U2R] {jsonMessage}</color>");
 #endif
             }
             catch (Exception e)
             {
-                Util.LogError($"[WebGLBridge] Native send failed: {e}");
+                GLog.Debug($"[WebGLBridge] Native send failed: {e}");
             }
         }
     }

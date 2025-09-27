@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Galashow.Common
 {
-    public class UIService : PersistentMonoSingleton<UIService>
+    public class UIService : MonoBehaviour
     {
         int _countdown;
         public void SetupForRound(object info)

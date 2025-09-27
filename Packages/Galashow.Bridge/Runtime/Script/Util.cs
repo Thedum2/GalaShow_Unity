@@ -34,22 +34,5 @@ namespace Galashow.Bridge
                 return false;
             }
         }
-        
-        public static void Log(string log)
-        {
-            var callerType = new System.Diagnostics.StackTrace().GetFrame(1)?.GetMethod()?.DeclaringType?.Name ?? "Unknown";
-            Debug.Log($"[{callerType}] - {log}");
-        }
-
-        public static void LogWarning(string log)
-        {
-            var callerType = new System.Diagnostics.StackTrace().GetFrame(1)?.GetMethod()?.DeclaringType?.Name ?? "Unknown";
-            Debug.LogWarning($"[{callerType}] - {log}");
-        }
-        public static void LogError(string log)
-        {
-            var callerType = new System.Diagnostics.StackTrace().GetFrame(1)?.GetMethod()?.DeclaringType?.Name ?? "Unknown";
-            Debug.LogError($"[{callerType}] - {log}");
-        }
     }
 }
