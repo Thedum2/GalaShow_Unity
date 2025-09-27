@@ -23,7 +23,6 @@ namespace Galashow.Bridge
 
         #region =========U2R=========
 
-        
         #endregion
 
         #region =========R2U=========
@@ -35,21 +34,21 @@ namespace Galashow.Bridge
             {
                 case "Selected":
                     if (Util.TryTo<Notify.R2U.Selected>(message.data, out var selectedData, out var err1))
-                        _ports.ForEach(p => p.Selected(selectedData));
+                        _ports.ForEach(p => p.R2U_SimulationManager_Selected_NTY(selectedData));
                     else
                         Util.LogWarning($"[SimulationHandler] bad payload for {action}: {err1}");
                     break;
                 case "SelectStarted":
-                    _ports.ForEach(p => p.SelectStarted());
+                    _ports.ForEach(p => p.R2U_SimulationManager_SelectStarted_NTY());
                     break;
                 case "SelectEvent":
                     if (Util.TryTo<Notify.R2U.SelectEvent>(message.data, out var evtData, out var err2))
-                        _ports.ForEach(p => p.SelectEvent(evtData));
+                        _ports.ForEach(p => p.R2U_SimulationManager_SelectEvent_NTY(evtData));
                     else
                         Util.LogWarning($"[SimulationHandler] bad payload for {action}: {err2}");
                     break;
                 case "Ended":
-                    _ports.ForEach(p => p.Ended());
+                    _ports.ForEach(p => p.R2U_SimulationManager_Ended_NTY());
                     break;
                 default:
                     Util.LogWarning($"[SimulationHandler] Unknown NTY action '{action}'");
@@ -84,7 +83,7 @@ namespace Galashow.Bridge
                             onError?.Invoke(e);
                         }
 
-                        _ports.ForEach(p => p.PreStarted(Reply, Fail));
+                        _ports.ForEach(p => p.R2U_SimulationManager_PreStarted_REQ(Reply, Fail));
                     }
                     break;
                 case "PostStarted":
@@ -115,7 +114,7 @@ namespace Galashow.Bridge
                             onError?.Invoke(e);
                         }
 
-                        _ports.ForEach(p => p.PostStarted(req, Reply, Fail));
+                        _ports.ForEach(p => p.R2U_SimulationManager_PostStarted_REQ(req, Reply, Fail));
                     }
                     break;
                 default:

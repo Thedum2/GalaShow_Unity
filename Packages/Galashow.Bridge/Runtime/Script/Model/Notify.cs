@@ -48,7 +48,7 @@ namespace Galashow.Bridge.Model
             public class SelectEvent
             {
                 [JsonProperty("userIndex")] 
-                public float UserIndex { get; set; }
+                public int UserIndex { get; set; }
                 
                 [JsonProperty("select")] 
                 public int Select { get; set; }
@@ -73,6 +73,18 @@ namespace Galashow.Bridge.Model
                 {
                     Progress = progress;
                     CurrentTask = currentTask;
+                }
+            }
+
+            //U2R_SimulationManager_PostEnded_NTY
+            public class PostEnded
+            {
+                [JsonProperty("resultChoiceId")]
+                public string ResultChoiceId { get; set; }
+
+                public PostEnded(string resultChoiceId)
+                {
+                    ResultChoiceId = resultChoiceId;
                 }
             }
         }
