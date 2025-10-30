@@ -5,7 +5,7 @@ using Galashow.Bridge.Model;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using System;
-using Galashow.Core; // for Guid
+using Galashow.Core; 
 
 public class Tester : MonoBehaviour
 {
