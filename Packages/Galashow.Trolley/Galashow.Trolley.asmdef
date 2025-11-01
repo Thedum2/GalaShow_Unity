@@ -1,7 +1,7 @@
 {
     "name": "Galashow.Trolley",
     "rootNamespace": "Galashow.Trolley",
-    "references": [],
+    "references": ["GUID:a7d46dd5b7e984d47b857fd2c78ae0b4"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
