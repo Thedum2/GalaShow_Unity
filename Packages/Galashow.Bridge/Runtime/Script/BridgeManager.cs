@@ -75,8 +75,7 @@ namespace Galashow.Bridge
 
         private void RegisterDefaultHandlers()
         {
-            RegisterHandler(new GameHandler());
-            RegisterHandler(new SimulationHandler());
+            RegisterHandler(_mainHandler.RGFHandler);
         }
 
         #endregion

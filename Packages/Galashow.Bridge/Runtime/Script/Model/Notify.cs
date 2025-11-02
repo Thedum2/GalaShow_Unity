@@ -9,49 +9,29 @@ namespace Galashow.Bridge.Model
 
         public class R2U
         {
-            //R2U_SimulationManager_Selected_NTY
-            public class Selected
+            //R2U_RGFManager_ChatInput_NTY
+            public class RGFChatInput
             {
-                [JsonProperty("index")] 
-                public int Index { get; set; }
-                
-                [JsonProperty("user")] 
-                public List<UserData> User { get; set; }
-                
-                [JsonProperty("title")] 
-                public string Title { get; set; }
-                
-                [JsonProperty("choices")] 
-                public List<Choice> Choices { get; set; }
-                public class Choice
-                {
-                    [JsonProperty("choiceId")] 
-                    public int ChoiceId { get; set; }
-                    
-                    [JsonProperty("text")] 
-                    public string Text { get; set; }
-                    
-                    [JsonProperty("imageUrl")] 
-                    public string ImageUrl { get; set; }
-                }
-                public class UserData
-                {
-                    [JsonProperty("id")] 
-                    public int ID { get; set; }
-                    
-                    [JsonProperty("nickname")] 
-                    public string Nickname { get; set; }
-                }
+                [JsonProperty("roundNumber")]
+                public int RoundNumber { get; set; }
+
+                [JsonProperty("inputEventTime")]
+                public long InputEventTime { get; set; }
+
+                [JsonProperty("inputIdx")]
+                public int InputIdx { get; set; }
+
+                [JsonProperty("chatInfo")]
+                public List<ChatInfo> ChatInfo { get; set; }
             }
 
-            //R2U_SimulationManager_SelectEvent_NTY
-            public class SelectEvent
+            public class ChatInfo
             {
-                [JsonProperty("userIndex")] 
-                public int UserIndex { get; set; }
-                
-                [JsonProperty("select")] 
-                public int Select { get; set; }
+                [JsonProperty("playerIdx")]
+                public int PlayerIdx { get; set; }
+
+                [JsonProperty("message")]
+                public string Message { get; set; }
             }
         }
         #endregion
@@ -60,32 +40,134 @@ namespace Galashow.Bridge.Model
 
         public class U2R
         {
-            //U2R_GameManager_LoadingProgress_NTY
-            public class LoadingProgress
+            //U2R_RGFManager_InitializeProgress_NTY
+            public class RGFInitializeProgress
             {
-                [JsonProperty("progress")] 
-                public float Progress { get; set; }
-                
-                [JsonProperty("currentTask")] 
-                public string CurrentTask { get; set; }
+                [JsonProperty("currentProgress")]
+                public int CurrentProgress { get; set; }
 
-                public LoadingProgress(float progress, string currentTask)
+                public RGFInitializeProgress(int currentProgress)
                 {
-                    Progress = progress;
-                    CurrentTask = currentTask;
+                    CurrentProgress = currentProgress;
                 }
             }
 
-            //U2R_SimulationManager_PostEnded_NTY
-            public class PostEnded
+            //U2R_RGFManager_PhaseChanged_NTY
+            public class RGFPhaseChanged
             {
-                [JsonProperty("resultChoiceId")]
-                public string ResultChoiceId { get; set; }
+                [JsonProperty("roundNumber")]
+                public int RoundNumber { get; set; }
 
-                public PostEnded(string resultChoiceId)
+                [JsonProperty("miniGamePluginIdx")]
+                public string MiniGamePluginIdx { get; set; }
+
+                [JsonProperty("fromPhase")]
+                public string FromPhase { get; set; }
+
+                [JsonProperty("toPhase")]
+                public string ToPhase { get; set; }
+
+                public RGFPhaseChanged(int roundNumber, string miniGamePluginIdx, string fromPhase, string toPhase)
                 {
-                    ResultChoiceId = resultChoiceId;
+                    RoundNumber = roundNumber;
+                    MiniGamePluginIdx = miniGamePluginIdx;
+                    FromPhase = fromPhase;
+                    ToPhase = toPhase;
                 }
+            }
+
+            //U2R_RGFManager_PhaseStarted_NTY
+            public class RGFPhaseStarted
+            {
+                [JsonProperty("phase")]
+                public string Phase { get; set; }
+
+                [JsonProperty("duration")]
+                public float Duration { get; set; }
+
+                public RGFPhaseStarted(string phase, float duration)
+                {
+                    Phase = phase;
+                    Duration = duration;
+                }
+            }
+
+            //U2R_RGFManager_PhaseEnded_NTY
+            public class RGFPhaseEnded
+            {
+                [JsonProperty("phase")]
+                public string Phase { get; set; }
+
+                [JsonProperty("duration")]
+                public float Duration { get; set; }
+
+                public RGFPhaseEnded(string phase, float duration)
+                {
+                    Phase = phase;
+                    Duration = duration;
+                }
+            }
+
+            //U2R_RGFManager_RoundStarted_NTY
+            public class RGFRoundStarted
+            {
+                [JsonProperty("roundNumber")]
+                public int RoundNumber { get; set; }
+
+                [JsonProperty("miniGamePluginIdx")]
+                public string MiniGamePluginIdx { get; set; }
+
+                [JsonProperty("gameName")]
+                public string GameName { get; set; }
+
+                public RGFRoundStarted(int roundNumber, string miniGamePluginIdx, string gameName)
+                {
+                    RoundNumber = roundNumber;
+                    MiniGamePluginIdx = miniGamePluginIdx;
+                    GameName = gameName;
+                }
+            }
+
+            //U2R_RGFManager_RoundCompleted_NTY
+            public class RGFRoundCompleted
+            {
+                [JsonProperty("roundNumber")]
+                public int RoundNumber { get; set; }
+
+                [JsonProperty("miniGamePluginIdx")]
+                public string MiniGamePluginIdx { get; set; }
+
+                [JsonProperty("gameName")]
+                public string GameName { get; set; }
+
+                [JsonProperty("result")]
+                public RoundResult Result { get; set; }
+
+                public RGFRoundCompleted(int roundNumber, string miniGamePluginIdx, string gameName, RoundResult result)
+                {
+                    RoundNumber = roundNumber;
+                    MiniGamePluginIdx = miniGamePluginIdx;
+                    GameName = gameName;
+                    Result = result;
+                }
+            }
+
+            public class RoundResult
+            {
+                [JsonProperty("survivorsUserIdx")]
+                public List<int> SurvivorsUserIdx { get; set; }
+
+                [JsonProperty("eliminatedUserIdx")]
+                public List<int> EliminatedUserIdx { get; set; }
+
+                [JsonProperty("totalParticipants")]
+                public int TotalParticipants { get; set; }
+
+                [JsonProperty("remainingPlayers")]
+                public int RemainingPlayers { get; set; }
+
+                [JsonProperty("totalPlayTime")]
+                public float TotalPlayTime { get; set; }
             }
         }
         

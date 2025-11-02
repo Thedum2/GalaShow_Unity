@@ -5,13 +5,11 @@ namespace Galashow.Bridge
 {
     public class MainHandler
     {
-        private SimulationHandler SimulationHandler { get; set; }
-        private GameHandler GameHandler { get; set; }
+        public RGFHandler RGFHandler { get; private set; }
 
         public void Initialize()
         {
-            SimulationHandler = new SimulationHandler();
-            GameHandler = new GameHandler();
+            RGFHandler = new RGFHandler();
         }
     }
 }

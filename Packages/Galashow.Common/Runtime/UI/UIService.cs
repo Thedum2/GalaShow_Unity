@@ -17,12 +17,7 @@ namespace Galashow.Common
         {
             GLog.Debug($"HUD {(on ? "ON" : "OFF")}", tag: nameof(UIService));
         }
-
-        public void SetChoices(List<Notify.R2U.Selected.Choice> choices)
-        {
-            GLog.Debug($"SetChoices: {choices?.Count ?? 0}", tag: nameof(UIService));
-        }
-
+        
         public void SetCountdown(float seconds)
         {
             int s = Mathf.CeilToInt(seconds);
