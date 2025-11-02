@@ -17,7 +17,6 @@ namespace Galashow.Trolley
         public string GameName => "트롤리 딜레마";
 
         private TrolleyGameData _gameData;
-        private TrolleyGameResult _gameResult;
         private Dictionary<string, DateTime> _playerSelectionTimes = new Dictionary<string, DateTime>();
 
         /// <summary>
@@ -35,15 +34,33 @@ namespace Galashow.Trolley
                 return;
             }
 
-            _gameResult = new TrolleyGameResult
+            // ========== Phase Duration 설정 ==========
+            // 각 게임에서 독립적으로 Phase 시간 설정
+            state.SetPhaseDurations(new Dictionary<GamePhase, float>
             {
-                RoundNumber = state.CurrentRound
+                { GamePhase.READY, 3f },
+                { GamePhase.SETUP, 1f },
+                { GamePhase.PRESENT, 5f },
+                { GamePhase.INPUT, _gameData.InputTimeLimit },
+                { GamePhase.WAIT, 2f },
+                { GamePhase.EXECUTE, 3f },
+                { GamePhase.REVEAL, 10f },
+                { GamePhase.CLEANUP, 2f }
+            });
+            GLog.Info($"[Trolley] Phase durations configured (INPUT: {_gameData.InputTimeLimit}s)");
+            // ========================================
+
+            // ========== GameState에서 결과 관리 ==========
+            var result = new TrolleyGameResult
+            {
+                RoundNumber = state.CurrentRound,
+                GameType = "trolley_dilemma",
+                StartTime = UnityEngine.Time.time
             };
+            state.ResultData = result;
+            // ==========================================
 
             _playerSelectionTimes.Clear();
-
-            // UI 서비스를 통해 준비 화면 표시
-            // 예: uiService.ShowReadyScreen();
 
             GLog.Debug($"[Trolley] Ready for round {state.CurrentRound}: {_gameData.Title}");
 
@@ -57,18 +74,30 @@ namespace Galashow.Trolley
         {
             GLog.Info($"[Trolley] SETUP Phase - Loading resources");
 
-            // 씬 리소스 로드
-            // 예: spaceService.LoadTrolleyScene();
+            // ========== ServiceContainer 활용 예시 ==========
+            // 서비스 생성 및 등록
+            var uiService = new TrolleyUIService();
+            var timerService = new TrolleyTimerService();
+            var scoreService = new TrolleyScoreService();
+
+            state.RegisterService(uiService);
+            state.RegisterService(timerService);
+            state.RegisterService(scoreService);
+
+            GLog.Info("[Trolley] Services registered: UIService, TimerService, ScoreService");
+
+            // UI 서비스 초기화
+            uiService.Initialize(_gameData);
+
+            // 점수 서비스 초기화
+            scoreService.Initialize(state);
+            // ==============================================
 
             // 선택지 UI 준비
             foreach (var choice in _gameData.Choices)
             {
                 GLog.Debug($"[Trolley] Choice prepared: {choice.Id} - {choice.Text}");
-                // 예: CreateChoiceButton(choice);
             }
-
-            // 오디오 준비
-            // 예: audioService.LoadTrolleyBGM();
 
             await Task.CompletedTask;
         }
@@ -80,23 +109,13 @@ namespace Galashow.Trolley
         {
             GLog.Info($"[Trolley] PRESENT Phase - Showing dilemma");
 
-            // 딜레마 제목 표시
-            GLog.Info($"[Trolley] Title: {_gameData.Title}");
+            // ========== ServiceContainer에서 서비스 가져오기 ==========
+            var uiService = state.GetService<TrolleyUIService>();
 
-            // 딜레마 설명 표시
-            if (!string.IsNullOrEmpty(_gameData.Description))
-            {
-                GLog.Info($"[Trolley] Description: {_gameData.Description}");
-            }
-
-            // UI에 문제 표시
-            // 예: uiService.ShowDilemmaTitle(_gameData.Title, _gameData.Description);
-
-            // 선택지 미리보기
-            // 예: uiService.ShowChoicePreview(_gameData.Choices);
-
-            // 애니메이션 재생
-            // 예: visualService.PlayDilemmaAnimation();
+            // UI 서비스를 통해 문제 표시
+            uiService?.ShowProblem();
+            uiService?.ShowChoices();
+            // =======================================================
 
             await Task.CompletedTask;
         }
@@ -106,22 +125,38 @@ namespace Galashow.Trolley
         /// </summary>
         public async Task OnInputAsync(GameState state)
         {
-            GLog.Info($"[Trolley] INPUT Phase - Collecting player choices (Time: {_gameData.InputTimeLimit}s)");
+            GLog.Info($"[Trolley] INPUT Phase - Collecting player choices (Time: {state.PhaseDuration}s)");
 
-            // 선택지 활성화
-            // 예: uiService.EnableChoiceButtons(_gameData.Choices);
+            // ========== TimerService 사용 ==========
+            var timerService = state.GetService<TrolleyTimerService>();
+            var uiService = state.GetService<TrolleyUIService>();
 
-            // 카운트다운 표시
-            // 예: uiService.ShowCountdown(_gameData.InputTimeLimit);
+            // 타이머 시작 (GameState의 PhaseDuration 사용)
+            timerService?.StartTimer(state.PhaseDuration);
 
-            // INPUT Phase에서는 플레이어 입력을 기다림
-            // 실제 입력은 RegisterPlayerChoice() 메서드를 통해 외부에서 등록됨
+            // 타이머 이벤트 등록
+            if (timerService != null)
+            {
+                timerService.OnTimerWarning += (remaining) =>
+                {
+                    uiService?.ShowMessage($"⚠️ 남은 시간: {remaining:F0}초!");
+                };
 
-            // 제한 시간 동안 대기
-            var waitTime = _gameData.InputTimeLimit;
-            await Task.Delay((int)(waitTime * 1000));
+                timerService.OnTimerExpired += () =>
+                {
+                    uiService?.ShowMessage("⏰ 시간 종료!");
+                };
+            }
 
-            GLog.Info($"[Trolley] Input time ended");
+            // UI에서 선택 진행률 표시
+            uiService?.ShowMessage("선택을 시작하세요!");
+            // =======================================
+
+            // ⚠️ 중복 대기 제거!
+            // PhaseExecutor가 이미 PhaseDuration만큼 대기하므로
+            // 여기서는 추가 대기 불필요
+
+            await Task.CompletedTask;
         }
 
         /// <summary>
@@ -155,6 +190,17 @@ namespace Galashow.Trolley
 
             var totalPlayers = _gameData.Choices.Sum(c => c.SelectedPlayers.Count);
 
+            // ========== GameState에서 결과 가져오기 ==========
+            var gameResult = state.ResultData as TrolleyGameResult;
+            if (gameResult == null)
+            {
+                GLog.Error("[Trolley] GameResult not found in GameState");
+                return;
+            }
+
+            var scoreService = state.GetService<TrolleyScoreService>();
+            // ===============================================
+
             // 각 선택지별 생존/탈락 결정
             foreach (var choice in _gameData.Choices)
             {
@@ -173,32 +219,50 @@ namespace Galashow.Trolley
                     ? (float)survivorCount / choice.SelectedPlayers.Count
                     : 0;
 
-                _gameResult.Survivors.AddRange(survivors);
+                gameResult.Survivors.AddRange(survivors);
 
                 var eliminated = choice.SelectedPlayers.Skip(survivorCount).ToList();
-                _gameResult.Eliminated.AddRange(eliminated);
+                gameResult.Eliminated.AddRange(eliminated);
 
-                _gameResult.ChoiceStats[choice.Id] = choiceStat;
+                gameResult.ChoiceStats[choice.Id] = choiceStat;
 
                 GLog.Debug($"[Trolley] Choice '{choice.Text}': {survivorCount} survivors, {eliminated.Count} eliminated");
             }
 
-            // 전체 생존율 계산
-            _gameResult.SurvivalRate = totalPlayers > 0
-                ? (float)_gameResult.Survivors.Count / totalPlayers
-                : 0;
+            // 전체 생존율 계산 (GameResult 메서드 사용)
+            gameResult.CalculateSurvivalRate();
 
             // 평균 선택 시간 계산
             if (_playerSelectionTimes.Count > 0)
             {
                 var avgTime = _playerSelectionTimes.Values.Average(t => (DateTime.Now - t).TotalSeconds);
-                _gameResult.AverageSelectionTime = (float)avgTime;
+                gameResult.AverageSelectionTime = (float)avgTime;
             }
 
-            GLog.Info($"[Trolley] Results: {_gameResult.Survivors.Count} survivors, {_gameResult.Eliminated.Count} eliminated");
+            // ========== ScoreService로 점수 계산 ==========
+            if (scoreService != null)
+            {
+                // 생존자에게 점수 부여
+                scoreService.CalculateSurvivalScores(gameResult.Survivors);
 
-            // 결과를 context에 저장
-            state.ResultData = _gameResult;
+                // 빠른 선택 보너스 계산
+                foreach (var kvp in _playerSelectionTimes)
+                {
+                    var playerId = kvp.Key;
+                    var selectionTime = (float)(DateTime.Now - kvp.Value).TotalSeconds;
+                    scoreService.CalculateSpeedBonus(playerId, selectionTime, _gameData.InputTimeLimit);
+                }
+
+                // 다수 선택 보너스
+                var majorityChoice = _gameData.Choices.OrderByDescending(c => c.SelectedPlayers.Count).FirstOrDefault();
+                if (majorityChoice != null)
+                {
+                    scoreService.CalculateMajorityBonus(majorityChoice.SelectedPlayers);
+                }
+            }
+            // =============================================
+
+            GLog.Info($"[Trolley] Results: {gameResult.Survivors.Count} survivors, {gameResult.Eliminated.Count} eliminated");
 
             await Task.CompletedTask;
         }
@@ -210,17 +274,30 @@ namespace Galashow.Trolley
         {
             GLog.Info($"[Trolley] REVEAL Phase - Showing results");
 
+            // ========== GameState에서 결과 가져오기 ==========
+            var gameResult = state.ResultData as TrolleyGameResult;
+            if (gameResult == null)
+            {
+                GLog.Error("[Trolley] GameResult not found in GameState");
+                return;
+            }
+
+            var uiService = state.GetService<TrolleyUIService>();
+            var scoreService = state.GetService<TrolleyScoreService>();
+            // ===============================================
+
             // 결과 화면 표시
-            // 예: uiService.ShowResults(_gameResult);
+            uiService?.ShowResult(gameResult);
 
-            // 생존자 강조
-            // 예: visualService.HighlightSurvivors(_gameResult.Survivors);
+            // 점수 랭킹 표시
+            scoreService?.PrintRanking(state);
 
-            // 탈락자 연출
-            // 예: visualService.PlayEliminationAnimation(_gameResult.Eliminated);
+            // 통계 정보
+            GLog.Info($"[Trolley] 최고 점수: {scoreService?.GetHighestScore() ?? 0}점");
+            GLog.Info($"[Trolley] 평균 점수: {scoreService?.GetAverageScore() ?? 0:F1}점");
 
             // 통계 표시
-            foreach (var kvp in _gameResult.ChoiceStats)
+            foreach (var kvp in gameResult.ChoiceStats)
             {
                 var choiceId = kvp.Key;
                 var stat = kvp.Value;
@@ -228,10 +305,7 @@ namespace Galashow.Trolley
             }
 
             // 생존율 표시
-            GLog.Info($"[Trolley] Overall survival rate: {_gameResult.SurvivalRate:P1}");
-
-            // 결과 사운드
-            // 예: audioService.PlayResultSound();
+            GLog.Info($"[Trolley] Overall survival rate: {gameResult.SurvivalRate:P1}");
 
             await Task.CompletedTask;
         }
@@ -243,11 +317,28 @@ namespace Galashow.Trolley
         {
             GLog.Info($"[Trolley] CLEANUP Phase - Cleaning up");
 
-            // 게임 오브젝트 정리
-            // 예: DestroyChoiceButtons();
+            // ========== 결과 최종 처리 ==========
+            var gameResult = state.ResultData as TrolleyGameResult;
+            if (gameResult != null)
+            {
+                gameResult.EndTime = UnityEngine.Time.time;
+                gameResult.CalculateTotalPlayTime();
+                GLog.Info($"[Trolley] Total play time: {gameResult.TotalPlayTime:F2}s");
+            }
+            // ==================================
 
-            // 리소스 언로드
-            // 예: spaceService.UnloadTrolleyScene();
+            // ========== 서비스 정리 ==========
+            var uiService = state.GetService<TrolleyUIService>();
+            var timerService = state.GetService<TrolleyTimerService>();
+
+            // UI 정리
+            uiService?.Clear();
+
+            // 타이머 리셋
+            timerService?.Reset();
+
+            GLog.Info("[Trolley] Services cleaned up");
+            // ==============================
 
             // 상태 초기화
             _gameData = null;
@@ -297,10 +388,18 @@ namespace Galashow.Trolley
 
         /// <summary>
         /// 게임 결과 가져오기
+        /// ⚠️ 이제 GameState.ResultData에서 관리됨
         /// </summary>
         public TrolleyGameResult GetResult()
         {
-            return _gameResult;
+            // GameState에서 결과 가져오기
+            if (RGFManager.Instance != null)
+            {
+                return RGFManager.Instance.State.ResultData as TrolleyGameResult;
+            }
+
+            GLog.Warn("[Trolley] RGFManager not initialized, cannot get result");
+            return null;
         }
     }
 }

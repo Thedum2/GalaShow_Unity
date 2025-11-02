@@ -2,6 +2,7 @@ using System.Collections;
 using System.Threading.Tasks;
 using UnityEngine;
 using Galashow.Core;
+using TMPro;
 
 namespace Galashow.Trolley
 {
@@ -11,19 +12,19 @@ namespace Galashow.Trolley
     /// </summary>
     public class TrolleyGameExample : MonoBehaviour
     {
-        [Header("게임 설정")]
-        [SerializeField] private bool autoStart = false;
-        [SerializeField] private float inputSimulationDelay = 5f; // 입력 시뮬레이션 지연 시간
+        [Header("상태 표시 UI")]
+        [SerializeField] private TMP_Text _currentState; // 상태 표시 UI
+        [SerializeField] private bool enableDetailedInfo = true; // 상세 정보 표시 여부
 
         private TrolleyDilemmaPlugin _trolleyPlugin;
+        private float _lastUpdateTime;
 
-        private void Start()
+        /// <summary>
+        /// 매 프레임 상태 업데이트
+        /// </summary>
+        private void Update()
         {
-            // 자동 시작이 활성화되어 있으면 게임 시작
-            if (autoStart)
-            {
-                StartCoroutine(RunGameExample());
-            }
+            UpdateStateDisplay();
         }
 
         /// <summary>
@@ -194,9 +195,6 @@ namespace Galashow.Trolley
                 RGFManager.Instance.State.CurrentPhase == GamePhase.INPUT
             );
 
-            GLog.Info($"[Example] {inputSimulationDelay}초 후 플레이어 입력 시뮬레이션 시작...");
-            yield return new WaitForSeconds(inputSimulationDelay);
-
             // 플레이어들의 선택 시뮬레이션
             // 60%는 choice_a, 40%는 choice_b 선택
             var state = RGFManager.Instance.State;
@@ -293,6 +291,114 @@ namespace Galashow.Trolley
                 GLog.Info($"    - 선택 수: {stat.SelectionCount}명 ({stat.SelectionRate:P0})");
                 GLog.Info($"    - 생존 수: {stat.SurvivorCount}명");
                 GLog.Info($"    - 실제 생존율: {stat.ActualSurvivalRate:P0}");
+            }
+        }
+
+        /// <summary>
+        /// 상태 표시 업데이트
+        /// </summary>
+        private void UpdateStateDisplay()
+        {
+            if (_currentState == null)
+            {
+                return;
+            }
+
+            // RGFManager가 없으면 대기 메시지
+            if (RGFManager.Instance == null)
+            {
+                _currentState.text = "RGFManager 초기화 대기 중...";
+                return;
+            }
+
+            var state = RGFManager.Instance.State;
+            var isRunning = RGFManager.Instance.IsRunning;
+
+            // 게임이 실행 중이 아니면 대기 메시지
+            if (!isRunning)
+            {
+                _currentState.text = "게임 대기 중\n\n[Run Game Example] 메뉴를 실행하세요";
+                return;
+            }
+
+            // 상태 정보 생성
+            var displayText = BuildStateDisplayText(state);
+            _currentState.text = displayText;
+        }
+
+        /// <summary>
+        /// 상태 표시 텍스트 생성
+        /// </summary>
+        private string BuildStateDisplayText(GameState state)
+        {
+            var text = new System.Text.StringBuilder();
+
+            // 기본 정보
+            text.AppendLine($"<size=32><b>ROUND {state.CurrentRound}</b></size>");
+            text.AppendLine($"<size=40><color=yellow>{GetPhaseDisplayName(state.CurrentPhase)}</color></size>");
+            text.AppendLine();
+
+            // 남은 시간 계산
+            float elapsedTime = Time.time - state.PhaseStartTime;
+            float remainingTime = Mathf.Max(0, state.PhaseDuration - elapsedTime);
+            float progress = state.PhaseDuration > 0 ? elapsedTime / state.PhaseDuration : 1f;
+
+            // 타이머 표시 (Phase 지속 시간이 있을 때만)
+            if (state.PhaseDuration > 0)
+            {
+                text.AppendLine($"<size=28><b>남은 시간: {remainingTime:F1}초</b></size>");
+
+                // 프로그레스 바
+                int barLength = 20;
+                int filledLength = Mathf.Clamp((int)(progress * barLength), 0, barLength);
+                string progressBar = new string('█', filledLength) + new string('░', barLength - filledLength);
+                text.AppendLine($"[{progressBar}] {progress * 100:F0}%");
+                text.AppendLine();
+            }
+
+            // 상세 정보
+            if (enableDetailedInfo)
+            {
+                text.AppendLine($"게임 타입: {state.GameType}");
+                text.AppendLine($"플레이어 수: {state.Players.Count}명");
+
+                // 생존 플레이어 수
+                var alivePlayers = state.GetAlivePlayers();
+                var eliminatedPlayers = state.GetEliminatedPlayers();
+                text.AppendLine($"생존: <color=green>{alivePlayers.Count}명</color> | 탈락: <color=red>{eliminatedPlayers.Count}명</color>");
+
+                text.AppendLine();
+                text.AppendLine($"<size=16><color=grey>Phase 시작: {state.PhaseStartTime:F1}초</color></size>");
+            }
+
+            return text.ToString();
+        }
+
+        /// <summary>
+        /// Phase 표시 이름 가져오기
+        /// </summary>
+        private string GetPhaseDisplayName(GamePhase phase)
+        {
+            switch (phase)
+            {
+                case GamePhase.READY:
+                    return "GamePhase.READY 준비 단계";
+                case GamePhase.SETUP:
+                    return "GamePhase.SETUP 설정 단계";
+                case GamePhase.PRESENT:
+                    return "GamePhase.PRESENT 문제 제시";
+                case GamePhase.INPUT:
+                    return "GamePhase.INPUT 입력 대기";
+                case GamePhase.WAIT:
+                    return "GamePhase.WAIT 입력 마감";
+                case GamePhase.EXECUTE:
+                    return "GamePhase.EXECUTE 결과 계산";
+                case GamePhase.REVEAL:
+                    return "GamePhase.REVEAL 결과 발표";
+                case GamePhase.CLEANUP:
+                    return "GamePhase.CLEANUP 정리 단계";
+                default:
+                    return phase.ToString();
             }
         }
 

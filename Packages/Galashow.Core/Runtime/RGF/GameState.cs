@@ -39,6 +39,22 @@ namespace Galashow.Core
         /// </summary>
         public object GameData { get; set; }
 
+        /// <summary>
+        /// Phase별 지속 시간 설정 (초)
+        /// 각 게임 플러그인에서 SETUP Phase에 설정
+        /// </summary>
+        public Dictionary<GamePhase, float> PhaseDurations { get; private set; } = new Dictionary<GamePhase, float>
+        {
+            { GamePhase.READY, 3f },
+            { GamePhase.SETUP, 1f },
+            { GamePhase.PRESENT, 3f },
+            { GamePhase.INPUT, 30f },
+            { GamePhase.WAIT, 0f },
+            { GamePhase.EXECUTE, 2f },
+            { GamePhase.REVEAL, 8f },
+            { GamePhase.CLEANUP, 2f }
+        };
+
         #endregion
 
         #region Phase Execution Context
@@ -103,22 +119,17 @@ namespace Galashow.Core
         #region Services
 
         /// <summary>
-        /// 서비스 접근용 딕셔너리
-        /// Key: 서비스 타입명, Value: 서비스 인스턴스
+        /// 서비스 컨테이너
+        /// 게임 실행 중 필요한 서비스들을 관리
         /// </summary>
-        public Dictionary<string, object> Services { get; private set; } = new Dictionary<string, object>();
+        public ServiceContainer Services { get; } = new ServiceContainer();
 
         /// <summary>
         /// 특정 타입의 서비스 가져오기
         /// </summary>
         public T GetService<T>() where T : class
         {
-            var typeName = typeof(T).Name;
-            if (Services.TryGetValue(typeName, out var service))
-            {
-                return service as T;
-            }
-            return null;
+            return Services.Get<T>();
         }
 
         /// <summary>
@@ -126,8 +137,7 @@ namespace Galashow.Core
         /// </summary>
         public void RegisterService<T>(T service) where T : class
         {
-            var typeName = typeof(T).Name;
-            Services[typeName] = service;
+            Services.Register(service);
         }
 
         #endregion
@@ -154,6 +164,35 @@ namespace Galashow.Core
 
             GLog.Info($"[RGF] Phase Transit: {oldPhase} → {newPhase}");
             OnPhaseChanged?.Invoke(oldPhase, newPhase);
+        }
+
+        /// <summary>
+        /// Phase 지속 시간 설정
+        /// </summary>
+        public void SetPhaseDuration(GamePhase phase, float duration)
+        {
+            PhaseDurations[phase] = duration;
+            GLog.Debug($"[GameState] Phase duration set: {phase} = {duration}s");
+        }
+
+        /// <summary>
+        /// Phase 지속 시간 가져오기
+        /// </summary>
+        public float GetPhaseDuration(GamePhase phase)
+        {
+            return PhaseDurations.TryGetValue(phase, out var duration) ? duration : 0f;
+        }
+
+        /// <summary>
+        /// 여러 Phase 지속 시간 일괄 설정
+        /// </summary>
+        public void SetPhaseDurations(Dictionary<GamePhase, float> durations)
+        {
+            foreach (var kvp in durations)
+            {
+                PhaseDurations[kvp.Key] = kvp.Value;
+            }
+            GLog.Debug($"[GameState] Phase durations set for {durations.Count} phases");
         }
 
         #endregion

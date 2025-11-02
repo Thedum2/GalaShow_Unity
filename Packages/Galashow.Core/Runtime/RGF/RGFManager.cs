@@ -8,13 +8,26 @@ namespace Galashow.Core
     /// <summary>
     /// RGF (Round Game Framework) 매니저
     /// 게임 플러그인을 로드하고 8단계 생명주기를 실행하는 핵심 엔진
+    /// 세분화된 컴포넌트들을 조합하여 전체적인 게임 플로우 제어
     /// </summary>
     public class RGFManager : PersistentMonoSingleton<RGFManager>
     {
+        #region Core Components
+
         /// <summary>
         /// 게임 상태
         /// </summary>
         public GameState State { get; private set; } = new GameState();
+
+        /// <summary>
+        /// 플러그인 레지스트리
+        /// </summary>
+        private PluginRegistry _pluginRegistry = new PluginRegistry();
+
+        /// <summary>
+        /// Phase 실행기
+        /// </summary>
+        private PhaseExecutor _phaseExecutor = new PhaseExecutor();
 
         /// <summary>
         /// 현재 실행 중인 플러그인
@@ -22,40 +35,33 @@ namespace Galashow.Core
         private IGamePlugin _currentPlugin;
 
         /// <summary>
-        /// 등록된 플러그인 딕셔너리
-        /// Key: 게임 타입 (예: "trolley_dilemma")
-        /// </summary>
-        private Dictionary<string, IGamePlugin> _plugins = new Dictionary<string, IGamePlugin>();
-
-        /// <summary>
-        /// Phase별 기본 지속 시간 (초)
-        /// </summary>
-        private Dictionary<GamePhase, float> _phaseDurations = new Dictionary<GamePhase, float>
-        {
-            { GamePhase.READY, 3f },
-            { GamePhase.SETUP, 1f },
-            { GamePhase.PRESENT, 3f },
-            { GamePhase.INPUT, 30f },
-            { GamePhase.WAIT, 0f },
-            { GamePhase.EXECUTE, 2f },
-            { GamePhase.REVEAL, 8f },
-            { GamePhase.CLEANUP, 2f }
-        };
-
-        /// <summary>
         /// 라운드 실행 중 여부
         /// </summary>
         public bool IsRunning { get; private set; }
 
+        #endregion
+
+        #region Events
+
         /// <summary>
         /// Phase 시작 이벤트
         /// </summary>
-        public event Action<GamePhase> OnPhaseStarted;
+        public event Action<GamePhase> OnPhaseStarted
+        {
+            add => _phaseExecutor.OnPhaseStarted += value;
+            remove => _phaseExecutor.OnPhaseStarted -= value;
+        }
 
         /// <summary>
         /// Phase 종료 이벤트
         /// </summary>
-        public event Action<GamePhase> OnPhaseEnded;
+        public event Action<GamePhase> OnPhaseEnded
+        {
+            add => _phaseExecutor.OnPhaseEnded += value;
+            remove => _phaseExecutor.OnPhaseEnded -= value;
+        }
+
+        #endregion
 
         protected override void Awake()
         {
@@ -71,14 +77,7 @@ namespace Galashow.Core
         /// </summary>
         public void RegisterPlugin(IGamePlugin plugin)
         {
-            if (plugin == null)
-            {
-                GLog.Error("[RGF] Cannot register null plugin");
-                return;
-            }
-
-            _plugins[plugin.GameType] = plugin;
-            GLog.Info($"[RGF] Plugin registered: {plugin.GameType} ({plugin.GameName})");
+            _pluginRegistry.Register(plugin);
         }
 
         /// <summary>
@@ -86,10 +85,7 @@ namespace Galashow.Core
         /// </summary>
         public void UnregisterPlugin(string gameType)
         {
-            if (_plugins.Remove(gameType))
-            {
-                GLog.Info($"[RGF] Plugin unregistered: {gameType}");
-            }
+            _pluginRegistry.Unregister(gameType);
         }
 
         /// <summary>
@@ -97,8 +93,7 @@ namespace Galashow.Core
         /// </summary>
         public IGamePlugin GetPlugin(string gameType)
         {
-            _plugins.TryGetValue(gameType, out var plugin);
-            return plugin;
+            return _pluginRegistry.Get(gameType);
         }
 
         /// <summary>
@@ -115,7 +110,7 @@ namespace Galashow.Core
         /// </summary>
         public void SetPhaseDuration(GamePhase phase, float duration)
         {
-            _phaseDurations[phase] = duration;
+            State.SetPhaseDuration(phase, duration);
         }
 
         /// <summary>
@@ -123,7 +118,7 @@ namespace Galashow.Core
         /// </summary>
         public float GetPhaseDuration(GamePhase phase)
         {
-            return _phaseDurations.TryGetValue(phase, out var duration) ? duration : 0f;
+            return State.GetPhaseDuration(phase);
         }
 
         #endregion
@@ -144,7 +139,8 @@ namespace Galashow.Core
                 return;
             }
 
-            if (!_plugins.TryGetValue(gameType, out var plugin))
+            var plugin = _pluginRegistry.Get(gameType);
+            if (plugin == null)
             {
                 GLog.Error($"[RGF] Plugin not found for game type: {gameType}");
                 return;
@@ -161,14 +157,7 @@ namespace Galashow.Core
             try
             {
                 // 8단계 생명주기 실행
-                await ExecutePhaseAsync(GamePhase.READY);
-                await ExecutePhaseAsync(GamePhase.SETUP);
-                await ExecutePhaseAsync(GamePhase.PRESENT);
-                await ExecutePhaseAsync(GamePhase.INPUT);
-                await ExecutePhaseAsync(GamePhase.WAIT);
-                await ExecutePhaseAsync(GamePhase.EXECUTE);
-                await ExecutePhaseAsync(GamePhase.REVEAL);
-                await ExecutePhaseAsync(GamePhase.CLEANUP);
+                await _phaseExecutor.ExecuteFullRoundAsync(plugin, State);
 
                 GLog.Info($"[RGF] Round {roundNumber} completed");
             }
@@ -188,78 +177,13 @@ namespace Galashow.Core
         /// </summary>
         public async Task ExecutePhaseAsync(GamePhase phase)
         {
-            // Phase 전환
-            var oldPhase = State.CurrentPhase;
-            State.TransitPhase(phase);
-            State.PhaseStartTime = Time.time;
-            State.PhaseDuration = _phaseDurations[phase];
-            OnPhaseStarted?.Invoke(phase);
-
-            // 이전 Phase 토큰 취소
-            if (State.CancellationToken != null)
+            if (_currentPlugin == null)
             {
-                TaskRunner.Instance.CancelAll(State.CancellationToken);
+                GLog.Error("[RGF] No plugin loaded, cannot execute phase");
+                return;
             }
 
-            // 새 토큰 생성
-            State.CancellationToken = new object();
-
-            GLog.Debug($"[RGF] Phase {phase} started (duration: {State.PhaseDuration}s)");
-
-            try
-            {
-                // Phase 전환 콜백
-                if (_currentPlugin != null)
-                {
-                    await _currentPlugin.OnPhaseTransitionAsync(oldPhase, phase);
-                }
-
-                // Phase별 플러그인 메서드 호출
-                switch (phase)
-                {
-                    case GamePhase.READY:
-                        await _currentPlugin.OnReadyAsync(State);
-                        break;
-                    case GamePhase.SETUP:
-                        await _currentPlugin.OnSetupAsync(State);
-                        break;
-                    case GamePhase.PRESENT:
-                        await _currentPlugin.OnPresentAsync(State);
-                        break;
-                    case GamePhase.INPUT:
-                        await _currentPlugin.OnInputAsync(State);
-                        break;
-                    case GamePhase.WAIT:
-                        await _currentPlugin.OnWaitAsync(State);
-                        break;
-                    case GamePhase.EXECUTE:
-                        await _currentPlugin.OnExecuteAsync(State);
-                        break;
-                    case GamePhase.REVEAL:
-                        await _currentPlugin.OnRevealAsync(State);
-                        break;
-                    case GamePhase.CLEANUP:
-                        await _currentPlugin.OnCleanupAsync(State);
-                        break;
-                }
-
-                // Phase 지속 시간 대기
-                if (State.PhaseDuration > 0)
-                {
-                    await Task.Delay((int)(State.PhaseDuration * 1000));
-                }
-
-                GLog.Debug($"[RGF] Phase {phase} ended");
-            }
-            catch (Exception ex)
-            {
-                GLog.Error($"[RGF] Phase {phase} error: {ex.Message}");
-                throw;
-            }
-            finally
-            {
-                OnPhaseEnded?.Invoke(phase);
-            }
+            await _phaseExecutor.ExecuteAsync(phase, _currentPlugin, State);
         }
 
         /// <summary>
@@ -274,10 +198,7 @@ namespace Galashow.Core
 
             GLog.Warn("[RGF] Round aborted");
 
-            if (State.CancellationToken != null)
-            {
-                TaskRunner.Instance.CancelAll(State.CancellationToken);
-            }
+            _phaseExecutor.Abort(State);
 
             IsRunning = false;
             _currentPlugin = null;

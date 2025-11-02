@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Galashow.Core;
 
 namespace Galashow.Trolley
 {
@@ -30,7 +31,7 @@ namespace Galashow.Trolley
         /// <summary>
         /// 입력 제한 시간 (초)
         /// </summary>
-        public float InputTimeLimit { get; set; } = 30f;
+        public float InputTimeLimit { get; set; } = 5f;
 
         /// <summary>
         /// 난이도
@@ -81,38 +82,29 @@ namespace Galashow.Trolley
 
     /// <summary>
     /// 트롤리 게임 결과
+    /// GameResult를 상속받아 트롤리 게임 전용 데이터 추가
     /// </summary>
-    public class TrolleyGameResult
+    public class TrolleyGameResult : GameResult
     {
-        /// <summary>
-        /// 라운드 번호
-        /// </summary>
-        public int RoundNumber { get; set; }
-
-        /// <summary>
-        /// 생존자 ID 목록
-        /// </summary>
-        public List<string> Survivors { get; set; } = new List<string>();
-
-        /// <summary>
-        /// 탈락자 ID 목록
-        /// </summary>
-        public List<string> Eliminated { get; set; } = new List<string>();
-
         /// <summary>
         /// 선택지별 통계
         /// </summary>
         public Dictionary<string, ChoiceStatistics> ChoiceStats { get; set; } = new Dictionary<string, ChoiceStatistics>();
 
         /// <summary>
-        /// 생존율
-        /// </summary>
-        public float SurvivalRate { get; set; }
-
-        /// <summary>
         /// 평균 선택 시간 (초)
         /// </summary>
         public float AverageSelectionTime { get; set; }
+
+        /// <summary>
+        /// 결과 초기화 (오버라이드)
+        /// </summary>
+        public override void Reset()
+        {
+            base.Reset();
+            ChoiceStats.Clear();
+            AverageSelectionTime = 0;
+        }
     }
 
     /// <summary>
