@@ -32,6 +32,7 @@ namespace Galashow.Bridge
             gameObject.name = bridgeGameObjectName;
             _sender = new BridgeSender(this);
             _mainHandler = new MainHandler();
+            _mainHandler.Initialize();
             RegisterDefaultHandlers();
             StartCoroutine(CheckTimeouts());
             InitializeBridge();
@@ -44,7 +45,6 @@ namespace Galashow.Bridge
 #else
             GLog.Debug("Running in non-WebGL environment, skipping WebGLBridge.Init()");
 #endif
-            _mainHandler.Initialize();
         }
 
         #region Message Handler Registration
