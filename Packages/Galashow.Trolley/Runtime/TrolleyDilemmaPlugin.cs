@@ -13,7 +13,6 @@ namespace Galashow.Trolley
     /// </summary>
     public class TrolleyDilemmaPlugin : IGamePlugin
     {
-        public string GameType => "trolley_dilemma";
         public string GameName => "트롤리 딜레마";
 
         private TrolleyGameData _gameData;
@@ -54,7 +53,6 @@ namespace Galashow.Trolley
             var result = new TrolleyGameResult
             {
                 RoundNumber = state.CurrentRound,
-                GameType = "trolley_dilemma",
                 StartTime = UnityEngine.Time.time
             };
             state.ResultData = result;

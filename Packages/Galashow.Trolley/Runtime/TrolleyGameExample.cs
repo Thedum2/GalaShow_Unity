@@ -17,6 +17,7 @@ namespace Galashow.Trolley
         [SerializeField] private bool enableDetailedInfo = true; // 상세 정보 표시 여부
 
         private TrolleyDilemmaPlugin _trolleyPlugin;
+        private string _trolleyPluginUuid; // 플러그인 UUID
         private float _lastUpdateTime;
 
         /// <summary>
@@ -53,8 +54,8 @@ namespace Galashow.Trolley
 
             // Step 2: TrolleyDilemmaPlugin 생성 및 등록
             _trolleyPlugin = new TrolleyDilemmaPlugin();
-            RGFManager.Instance.RegisterPlugin(_trolleyPlugin);
-            GLog.Info($"[Example] Step 2: 플러그인 등록 완료 - {_trolleyPlugin.GameType}");
+            _trolleyPluginUuid = RGFManager.Instance.RegisterPlugin(_trolleyPlugin);
+            GLog.Info($"[Example] Step 2: 플러그인 등록 완료 - {_trolleyPlugin.GameName} (UUID: {_trolleyPluginUuid})");
 
             // Step 3: Phase 이벤트 리스너 등록
             RegisterPhaseEvents();
@@ -78,7 +79,7 @@ namespace Galashow.Trolley
             StartCoroutine(SimulatePlayerInputs());
 
             // 라운드 실행 (Task를 코루틴으로 변환)
-            var task = RGFManager.Instance.StartRoundAsync("trolley_dilemma", 1, gameData);
+            var task = RGFManager.Instance.StartRoundAsync(_trolleyPluginUuid, 1, gameData);
             yield return new WaitUntil(() => task.IsCompleted);
 
             if (task.Exception != null)
@@ -359,7 +360,6 @@ namespace Galashow.Trolley
             // 상세 정보
             if (enableDetailedInfo)
             {
-                text.AppendLine($"게임 타입: {state.GameType}");
                 text.AppendLine($"플레이어 수: {state.Players.Count}명");
 
                 // 생존 플레이어 수

@@ -9,11 +9,6 @@ namespace Galashow.Core
     public interface IGamePlugin
     {
         /// <summary>
-        /// 게임 타입 식별자 (예: "trolley_dilemma", "speed_quiz")
-        /// </summary>
-        string GameType { get; }
-
-        /// <summary>
         /// 게임 표시 이름
         /// </summary>
         string GameName { get; }

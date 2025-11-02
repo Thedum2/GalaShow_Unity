@@ -43,10 +43,6 @@ namespace Galashow.Core
         /// </summary>
         public float EndTime { get; set; }
 
-        /// <summary>
-        /// 게임 타입
-        /// </summary>
-        public string GameType { get; set; }
 
         /// <summary>
         /// 추가 커스텀 데이터

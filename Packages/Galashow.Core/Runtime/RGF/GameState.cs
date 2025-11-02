@@ -30,11 +30,6 @@ namespace Galashow.Core
         public int CurrentRound { get; set; }
 
         /// <summary>
-        /// 게임 타입
-        /// </summary>
-        public string GameType { get; set; }
-
-        /// <summary>
         /// 현재 게임 데이터 (라운드별 설정, 문제 등)
         /// </summary>
         public object GameData { get; set; }
@@ -81,19 +76,13 @@ namespace Galashow.Core
 
         #endregion
 
-        #region Player & Input Data
+        #region Player Data
 
         /// <summary>
         /// 플레이어 목록
         /// Key: 플레이어 ID
         /// </summary>
         public Dictionary<string, PlayerInfo> Players { get; private set; } = new Dictionary<string, PlayerInfo>();
-
-        /// <summary>
-        /// 플레이어 입력 데이터
-        /// Key: 플레이어 ID, Value: 입력 데이터
-        /// </summary>
-        public Dictionary<string, object> PlayerInputs { get; set; } = new Dictionary<string, object>();
 
         #endregion
 
@@ -103,16 +92,6 @@ namespace Galashow.Core
         /// 게임 결과 데이터
         /// </summary>
         public object ResultData { get; set; }
-
-        /// <summary>
-        /// 게임 설정 데이터
-        /// </summary>
-        public Dictionary<string, object> Config { get; private set; } = new Dictionary<string, object>();
-
-        /// <summary>
-        /// 게임 통계 데이터
-        /// </summary>
-        public GameStatistics Statistics { get; private set; } = new GameStatistics();
 
         #endregion
 
@@ -263,16 +242,12 @@ namespace Galashow.Core
             CurrentPhase = GamePhase.READY;
             PreviousPhase = GamePhase.READY;
             CurrentRound = 0;
-            GameType = string.Empty;
             GameData = null;
             PhaseStartTime = 0;
             PhaseDuration = 0;
             CancellationToken = null;
             ResultData = null;
             Players.Clear();
-            PlayerInputs.Clear();
-            Config.Clear();
-            Statistics.Reset();
             Services.Clear();
         }
 
@@ -289,26 +264,5 @@ namespace Galashow.Core
         public bool IsAlive { get; set; }
         public int Score { get; set; }
         public Dictionary<string, object> CustomData { get; set; } = new Dictionary<string, object>();
-    }
-
-    /// <summary>
-    /// 게임 통계
-    /// </summary>
-    public class GameStatistics
-    {
-        public int TotalRounds { get; set; }
-        public float TotalPlayTime { get; set; }
-        public float AverageRoundTime { get; set; }
-        public float SurvivalRate { get; set; }
-        public Dictionary<string, object> CustomStats { get; set; } = new Dictionary<string, object>();
-
-        public void Reset()
-        {
-            TotalRounds = 0;
-            TotalPlayTime = 0;
-            AverageRoundTime = 0;
-            SurvivalRate = 0;
-            CustomStats.Clear();
-        }
     }
 }

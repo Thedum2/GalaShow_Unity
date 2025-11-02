@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Galashow.Core
@@ -10,51 +11,55 @@ namespace Galashow.Core
     {
         /// <summary>
         /// 등록된 플러그인 딕셔너리
-        /// Key: 게임 타입 (예: "trolley_dilemma")
+        /// Key: UUID
         /// </summary>
         private Dictionary<string, IGamePlugin> _plugins = new Dictionary<string, IGamePlugin>();
 
         /// <summary>
         /// 게임 플러그인 등록
         /// </summary>
-        public void Register(IGamePlugin plugin)
+        /// <returns>플러그인 UUID</returns>
+        public string Register(IGamePlugin plugin)
         {
             if (plugin == null)
             {
                 GLog.Error("[PluginRegistry] Cannot register null plugin");
-                return;
+                return null;
             }
+            
+            string uuid = Guid.NewGuid().ToString();
+            _plugins[uuid] = plugin;
+            GLog.Info($"[PluginRegistry] Plugin registered: {uuid} ({plugin.GameName})");
 
-            _plugins[plugin.GameType] = plugin;
-            GLog.Info($"[PluginRegistry] Plugin registered: {plugin.GameType} ({plugin.GameName})");
+            return uuid;
         }
 
         /// <summary>
         /// 게임 플러그인 등록 해제
         /// </summary>
-        public void Unregister(string gameType)
+        public void Unregister(string uuid)
         {
-            if (_plugins.Remove(gameType))
+            if (_plugins.Remove(uuid))
             {
-                GLog.Info($"[PluginRegistry] Plugin unregistered: {gameType}");
+                GLog.Info($"[PluginRegistry] Plugin unregistered: {uuid}");
             }
         }
 
         /// <summary>
         /// 플러그인 조회
         /// </summary>
-        public IGamePlugin Get(string gameType)
+        public IGamePlugin Get(string uuid)
         {
-            _plugins.TryGetValue(gameType, out var plugin);
+            _plugins.TryGetValue(uuid, out var plugin);
             return plugin;
         }
 
         /// <summary>
         /// 플러그인 존재 여부 확인
         /// </summary>
-        public bool Contains(string gameType)
+        public bool Contains(string uuid)
         {
-            return _plugins.ContainsKey(gameType);
+            return _plugins.ContainsKey(uuid);
         }
 
         /// <summary>

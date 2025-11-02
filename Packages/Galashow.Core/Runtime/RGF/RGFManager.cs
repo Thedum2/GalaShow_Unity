@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using UnityEngine;
 
 namespace Galashow.Core
 {
@@ -75,31 +73,37 @@ namespace Galashow.Core
         /// <summary>
         /// 게임 플러그인 등록
         /// </summary>
-        public void RegisterPlugin(IGamePlugin plugin)
+        /// <returns>플러그인 UUID</returns>
+        public string RegisterPlugin(IGamePlugin plugin)
         {
-            _pluginRegistry.Register(plugin);
+            return _pluginRegistry.Register(plugin);
         }
 
         /// <summary>
         /// 게임 플러그인 등록 해제
         /// </summary>
-        public void UnregisterPlugin(string gameType)
+        public void UnregisterPlugin(string uuid)
         {
-            _pluginRegistry.Unregister(gameType);
+            _pluginRegistry.Unregister(uuid);
         }
 
         /// <summary>
         /// 플러그인 조회
         /// </summary>
-        public IGamePlugin GetPlugin(string gameType)
+        public IGamePlugin GetPlugin(string uuid)
         {
-            return _pluginRegistry.Get(gameType);
+            return _pluginRegistry.Get(uuid);
         }
 
         /// <summary>
         /// 현재 실행 중인 플러그인
         /// </summary>
         public IGamePlugin CurrentPlugin => _currentPlugin;
+
+        /// <summary>
+        /// 현재 실행 중인 플러그인 UUID
+        /// </summary>
+        public string CurrentPluginUuid { get; private set; }
 
         #endregion
 
@@ -128,10 +132,10 @@ namespace Galashow.Core
         /// <summary>
         /// 라운드 시작
         /// </summary>
-        /// <param name="gameType">게임 타입</param>
+        /// <param name="pluginUuid">플러그인 UUID</param>
         /// <param name="roundNumber">라운드 번호</param>
         /// <param name="gameData">게임 데이터</param>
-        public async Task StartRoundAsync(string gameType, int roundNumber, object gameData = null)
+        public async Task StartRoundAsync(string pluginUuid, int roundNumber, object gameData = null)
         {
             if (IsRunning)
             {
@@ -139,20 +143,20 @@ namespace Galashow.Core
                 return;
             }
 
-            var plugin = _pluginRegistry.Get(gameType);
+            var plugin = _pluginRegistry.Get(pluginUuid);
             if (plugin == null)
             {
-                GLog.Error($"[RGF] Plugin not found for game type: {gameType}");
+                GLog.Error($"[RGF] Plugin not found for UUID: {pluginUuid}");
                 return;
             }
 
             IsRunning = true;
             _currentPlugin = plugin;
-            State.GameType = gameType;
+            CurrentPluginUuid = pluginUuid;
             State.CurrentRound = roundNumber;
             State.GameData = gameData;
 
-            GLog.Info($"[RGF] Starting Round {roundNumber} - {gameType}");
+            GLog.Info($"[RGF] Starting Round {roundNumber} - {plugin.GameName} (UUID: {pluginUuid})");
 
             try
             {
@@ -169,6 +173,7 @@ namespace Galashow.Core
             {
                 IsRunning = false;
                 _currentPlugin = null;
+                CurrentPluginUuid = null;
             }
         }
 
