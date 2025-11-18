@@ -1,0 +1,11 @@
+{
+  "name": "com.galashow.rgf",
+  "version": "0.1.0",
+  "displayName": "Galashow RGF",
+  "description": "Round Game Framework - Mini-game lifecycle management system",
+  "unity": "2022.3",
+  "dependencies": {
+    "com.galashow.core": "0.1.0",
+    "com.galashow.bridge": "0.1.0"
+  }
+}

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Galashow.Core;
+using Galashow.RGF;
 
 namespace Galashow.Trolley
 {

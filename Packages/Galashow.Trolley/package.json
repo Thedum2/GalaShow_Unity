@@ -4,5 +4,8 @@
   "displayName": "Galashow Trolley",
   "description": "Individual scenario (controller/resource/production preset) for Galashow",
   "unity": "2022.3",
-  "dependencies": {}
+  "dependencies": {
+    "com.galashow.rgf": "0.1.0",
+    "com.galashow.common": "0.1.0"
+  }
 }

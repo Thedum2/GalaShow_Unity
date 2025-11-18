@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
+using Galashow.Core;
 
-namespace Galashow.Core
+namespace Galashow.RGF
 {
     /// <summary>
     /// Phase 실행 관리 클래스

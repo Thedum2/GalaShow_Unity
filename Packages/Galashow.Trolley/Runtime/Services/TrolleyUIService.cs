@@ -1,5 +1,6 @@
 using UnityEngine;
 using Galashow.Core;
+using Galashow.RGF;
 
 namespace Galashow.Trolley
 {

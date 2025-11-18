@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Galashow.Core;
 
-namespace Galashow.Core
+namespace Galashow.RGF
 {
     /// <summary>
     /// RGF 게임 상태 관리 클래스

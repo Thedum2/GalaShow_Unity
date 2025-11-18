@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using Galashow.Bridge.Model;
 using Galashow.Core;
 using UnityEngine;
 

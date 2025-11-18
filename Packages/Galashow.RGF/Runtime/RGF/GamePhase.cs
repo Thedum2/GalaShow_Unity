@@ -1,4 +1,4 @@
-namespace Galashow.Core
+namespace Galashow.RGF
 {
     /// <summary>
     /// RGF의 8단계 게임 생명주기 Phase

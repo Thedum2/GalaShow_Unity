@@ -2,6 +2,7 @@ using System.Collections;
 using System.Threading.Tasks;
 using UnityEngine;
 using Galashow.Core;
+using Galashow.RGF;
 using TMPro;
 
 namespace Galashow.Trolley

@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Galashow.Core;
 
-namespace Galashow.Core
+namespace Galashow.RGF
 {
     /// <summary>
     /// 게임 플러그인 등록 및 관리 클래스

@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Galashow.Core;
 
-namespace Galashow.Core
+namespace Galashow.RGF
 {
     /// <summary>
     /// 서비스 컨테이너

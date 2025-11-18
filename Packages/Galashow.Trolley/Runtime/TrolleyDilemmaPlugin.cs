@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using Galashow.Core;
+using Galashow.RGF;
 
 namespace Galashow.Trolley
 {

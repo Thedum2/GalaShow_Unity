@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace Galashow.Core
+namespace Galashow.RGF
 {
     /// <summary>
     /// 게임 플러그인 인터페이스

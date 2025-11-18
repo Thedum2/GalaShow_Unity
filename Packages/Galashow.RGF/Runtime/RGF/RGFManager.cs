@@ -1,7 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using Galashow.Core;
 
-namespace Galashow.Core
+namespace Galashow.RGF
 {
     /// <summary>
     /// RGF (Round Game Framework) 매니저

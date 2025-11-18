@@ -24,11 +24,23 @@
       "source": "embedded",
       "dependencies": {}
     },
+    "com.galashow.rgf": {
+      "version": "file:Galashow.RGF",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.galashow.core": "0.1.0",
+        "com.galashow.bridge": "0.1.0"
+      }
+    },
     "com.galashow.trolley": {
       "version": "file:Galashow.Trolley",
       "depth": 0,
       "source": "embedded",
-      "dependencies": {}
+      "dependencies": {
+        "com.galashow.rgf": "0.1.0",
+        "com.galashow.common": "0.1.0"
+      }
     },
     "com.unity.collab-proxy": {
       "version": "2.8.2",

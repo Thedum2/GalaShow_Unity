@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Galashow.Core
+namespace Galashow.RGF
 {
     /// <summary>
     /// 게임 결과 베이스 클래스
