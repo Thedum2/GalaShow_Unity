@@ -7,19 +7,17 @@ namespace Galashow.Common
     {
         public void PrepareForRound(object round)
         {
-            GLog.Debug("Visual PrepareForRound", tag: nameof(VisualService));
+            GLog.Debug("[Visual] Preparing for round");
         }
 
         public void PulseChoice(int choiceId)
         {
-            // 특정 선택지에 하이라이트/펄스 FX
-            GLog.Trace($"Pulse choice {choiceId}", tag: nameof(VisualService));
+            GLog.Trace($"[Visual] Pulse choice {choiceId}");
         }
 
         public void RevealResult(int resultChoiceId)
         {
-            GLog.Info($"Reveal Result: {resultChoiceId}", tag: nameof(VisualService));
-            // 파티클/포스트프로세싱/텍스트 등 종합 연출 지점
+            GLog.Info($"[Visual] Reveal result: {resultChoiceId}");
         }
     }
 }

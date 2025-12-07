@@ -131,7 +131,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 95136522}
-  - component: {fileID: 95136523}
   m_Layer: 0
   m_Name: Trolley Dliemma
   m_TagString: Untagged
@@ -154,20 +153,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1206340739}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &95136523
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 95136521}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: da4ebda382137974486444bafa159ac6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _currentState: {fileID: 497222138}
-  enableDetailedInfo: 1
 --- !u!4 &95284809 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6788538757290762322, guid: ad4137f595ec8e2449cacca9df7d3735, type: 3}
@@ -803,6 +788,7 @@ GameObject:
   m_Component:
   - component: {fileID: 610004478}
   - component: {fileID: 610004479}
+  - component: {fileID: 610004480}
   m_Layer: 0
   m_Name: RGFManager
   m_TagString: Untagged
@@ -838,6 +824,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   UnparentOnAwake: 1
+--- !u!114 &610004480
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 610004477}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02b1eed3e680bb64fa4e72fbcfdc123d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  autoStart: 0
+  delayBetweenSteps: 1
+  initializeJson: {fileID: 4900000, guid: 567cdd21075e49c4698a57de473a046c, type: 3}
+  registerPluginJson: {fileID: 4900000, guid: 68754c05ec6bfd742bc7b973cf6026f4, type: 3}
+  startRoundJson: {fileID: 4900000, guid: 61f8cbe5ac1955b49be381e7a8557ab7, type: 3}
+  _statusText: {fileID: 497222138}
+  _progressText: {fileID: 0}
+  enableDetailedInfo: 1
 --- !u!1 &612607908
 GameObject:
   m_ObjectHideFlags: 0

@@ -29,7 +29,7 @@ namespace Galashow.RGF
         {
             if (plugin == null)
             {
-                GLog.Error("[PhaseExecutor] Cannot execute phase without plugin");
+                GLog.Error("[RGF✗] PhaseExecutor: plugin is null");
                 return;
             }
 
@@ -37,10 +37,7 @@ namespace Galashow.RGF
             var oldPhase = state.CurrentPhase;
             state.TransitPhase(phase);
             state.PhaseStartTime = Time.time;
-
-            // ========== GameState에서 Duration 가져오기 ==========
             state.PhaseDuration = state.GetPhaseDuration(phase);
-            // ==================================================
 
             OnPhaseStarted?.Invoke(phase);
 
@@ -52,8 +49,6 @@ namespace Galashow.RGF
 
             // 새 토큰 생성
             state.CancellationToken = new object();
-
-            GLog.Debug($"[PhaseExecutor] Phase {phase} started (duration: {state.PhaseDuration}s)");
 
             try
             {
@@ -68,12 +63,10 @@ namespace Galashow.RGF
                 {
                     await Task.Delay((int)(state.PhaseDuration * 1000));
                 }
-
-                GLog.Debug($"[PhaseExecutor] Phase {phase} ended");
             }
             catch (Exception ex)
             {
-                GLog.Error($"[PhaseExecutor] Phase {phase} error: {ex.Message}");
+                GLog.Error($"[RGF✗] Phase {phase} error: {ex.Message}");
                 throw;
             }
             finally
@@ -139,7 +132,7 @@ namespace Galashow.RGF
             if (state.CancellationToken != null)
             {
                 TaskRunner.Instance.CancelAll(state.CancellationToken);
-                GLog.Warn("[PhaseExecutor] Phase execution aborted");
+                GLog.Warn("[RGF] Phase aborted");
             }
         }
     }

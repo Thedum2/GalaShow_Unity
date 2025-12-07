@@ -1,0 +1,12 @@
+{
+  "id": "test_register_001",
+  "type": "REQ",
+  "route": "RGFManager_RegisterPlugin",
+  "ok": true,
+  "data": [
+    {
+      "MiniGameIdx": 1,
+      "MiniGameName": "DummyGame"
+    }
+  ]
+}

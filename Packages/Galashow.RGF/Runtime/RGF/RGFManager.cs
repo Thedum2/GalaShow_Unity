@@ -140,14 +140,14 @@ namespace Galashow.RGF
         {
             if (IsRunning)
             {
-                GLog.Warn("[RGF] Round already running, ignoring start request");
+                GLog.Warn("[RGF] Round already running");
                 return;
             }
 
             var plugin = _pluginRegistry.Get(pluginUuid);
             if (plugin == null)
             {
-                GLog.Error($"[RGF] Plugin not found for UUID: {pluginUuid}");
+                GLog.Error($"[RGF✗] Plugin not found: {pluginUuid}");
                 return;
             }
 
@@ -157,18 +157,18 @@ namespace Galashow.RGF
             State.CurrentRound = roundNumber;
             State.GameData = gameData;
 
-            GLog.Info($"[RGF] Starting Round {roundNumber} - {plugin.GameName} (UUID: {pluginUuid})");
+            GLog.Info($"[RGF] Round {roundNumber} Start - {plugin.GameName}");
 
             try
             {
                 // 8단계 생명주기 실행
                 await _phaseExecutor.ExecuteFullRoundAsync(plugin, State);
 
-                GLog.Info($"[RGF] Round {roundNumber} completed");
+                GLog.Info($"[RGF] Round {roundNumber} Complete");
             }
             catch (Exception ex)
             {
-                GLog.Error($"[RGF] Round execution error: {ex.Message}");
+                GLog.Error($"[RGF✗] Round error: {ex.Message}");
             }
             finally
             {

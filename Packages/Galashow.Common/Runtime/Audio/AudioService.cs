@@ -7,31 +7,27 @@ namespace Galashow.Common
     {
         public void PrepareForRound(object round)
         {
-            // 사운드 버스/볼륨 초기화 등
-            GLog.Debug("Audio PrepareForRound", tag: nameof(AudioService));
+            GLog.Debug("[Audio] Preparing for round");
         }
 
         public void PlayBgm(string key, float fadeIn = 0f)
         {
-            GLog.Info($"PlayBGM {key} (fadeIn={fadeIn})", tag: nameof(AudioService));
-            // TODO: AudioMixer/Addressables/Bus 구현
+            GLog.Info($"[Audio] BGM: {key} (fade={fadeIn}s)");
         }
 
         public void StopBgm(float fadeOut = 0f)
         {
-            GLog.Info($"StopBGM (fadeOut={fadeOut})", tag: nameof(AudioService));
+            GLog.Info($"[Audio] Stop BGM (fade={fadeOut}s)");
         }
 
         public void PlaySfx(string key)
         {
-            // 짧은 효과음
-            GLog.Debug($"SFX {key}", tag: nameof(AudioService));
+            GLog.Debug($"[Audio] SFX: {key}");
         }
 
         public void Duck(bool on)
         {
-            // BGM ducking (sidechain 느낌)
-            GLog.Debug($"Duck={(on ? "on" : "off")}", tag: nameof(AudioService));
+            GLog.Debug($"[Audio] Duck {(on ? "on" : "off")}");
         }
     }
 }

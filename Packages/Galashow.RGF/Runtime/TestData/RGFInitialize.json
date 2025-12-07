@@ -1,0 +1,29 @@
+{
+  "id": "test_init_001",
+  "type": "REQ",
+  "route": "RGFManager_Initialize",
+  "ok": true,
+  "data": {
+    "SessionId": "test-session-001",
+    "PlayerInfo": [
+      {
+        "PlayerIdx": 1,
+        "PlayerType": "human",
+        "PlayerName": "Player 1"
+      },
+      {
+        "PlayerIdx": 2,
+        "PlayerType": "human",
+        "PlayerName": "Player 2"
+      },
+      {
+        "PlayerIdx": 3,
+        "PlayerType": "human",
+        "PlayerName": "Player 3"
+      }
+    ],
+    "Config": {
+      "EnableDebugLog": true
+    }
+  }
+}

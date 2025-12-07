@@ -40,7 +40,6 @@ namespace Galashow.Trolley
             {
                 _scores[player.Id] = 0;
             }
-            GLog.Info($"[TrolleyScoreService] 점수 시스템 초기화: {_scores.Count}명");
         }
 
         /// <summary>
@@ -52,7 +51,6 @@ namespace Galashow.Trolley
             {
                 AddScore(playerId, SURVIVAL_BONUS);
             }
-            GLog.Info($"[TrolleyScoreService] 생존 점수 계산 완료: {survivors.Count}명 × {SURVIVAL_BONUS}점");
         }
 
         /// <summary>
@@ -60,14 +58,12 @@ namespace Galashow.Trolley
         /// </summary>
         public void CalculateSpeedBonus(string playerId, float selectionTime, float maxTime)
         {
-            // 빠를수록 높은 점수 (최대 시간의 50% 이내면 최대 보너스)
             float speedRatio = 1f - (selectionTime / maxTime);
             int bonus = (int)(QUICK_CHOICE_BONUS * speedRatio);
 
             if (bonus > 0)
             {
                 AddScore(playerId, bonus);
-                GLog.Info($"[TrolleyScoreService] 빠른 선택 보너스: {playerId} +{bonus}점");
             }
         }
 
@@ -80,7 +76,6 @@ namespace Galashow.Trolley
             {
                 AddScore(playerId, MAJORITY_BONUS);
             }
-            GLog.Info($"[TrolleyScoreService] 다수 선택 보너스: {majorityPlayers.Count}명 × {MAJORITY_BONUS}점");
         }
 
         /// <summary>
@@ -135,7 +130,7 @@ namespace Galashow.Trolley
         /// </summary>
         public void PrintRanking(GameState state)
         {
-            GLog.Info("========== 점수 랭킹 ==========");
+            GLog.Info("[Trolley] ===== Score Ranking =====");
 
             var ranking = GetRanking();
             int rank = 1;
@@ -144,11 +139,9 @@ namespace Galashow.Trolley
             {
                 var playerInfo = state.Players[playerId];
                 string statusIcon = playerInfo.IsAlive ? "✓" : "✗";
-                GLog.Info($"{rank}. {statusIcon} {playerInfo.Name} ({playerId}): {score}점");
+                GLog.Info($"[Trolley] {rank}. {statusIcon} {playerInfo.Name}: {score}pt");
                 rank++;
             }
-
-            GLog.Info("==============================");
         }
 
         /// <summary>

@@ -142,7 +142,7 @@ namespace Galashow.RGF
             PreviousPhase = oldPhase;
             CurrentPhase = newPhase;
 
-            GLog.Info($"[RGF] Phase Transit: {oldPhase} → {newPhase}");
+            GLog.Debug($"[Phase↔] {oldPhase} → {newPhase}");
             OnPhaseChanged?.Invoke(oldPhase, newPhase);
         }
 
@@ -152,7 +152,6 @@ namespace Galashow.RGF
         public void SetPhaseDuration(GamePhase phase, float duration)
         {
             PhaseDurations[phase] = duration;
-            GLog.Debug($"[GameState] Phase duration set: {phase} = {duration}s");
         }
 
         /// <summary>
@@ -172,7 +171,6 @@ namespace Galashow.RGF
             {
                 PhaseDurations[kvp.Key] = kvp.Value;
             }
-            GLog.Debug($"[GameState] Phase durations set for {durations.Count} phases");
         }
 
         #endregion

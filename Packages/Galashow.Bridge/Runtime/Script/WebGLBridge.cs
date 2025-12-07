@@ -17,23 +17,23 @@ namespace Galashow.Bridge
         
         public static void SendMessageToReact(string jsonMessage)
         {
-            GLog.Debug($"[WebGLBridge:Editor] Send to React: {jsonMessage}");
+            GLog.Debug($"[MESSAGE - R2U] {jsonMessage}");
         }
 
         public static int IsReactBridgeReady()
         {
-            GLog.Debug($"[WebGLBridge:Editor] Send to React");
+            GLog.Debug($"[WebGLBridge] Send to React");
             return 1;
         }
 
         public static void InitializeReactBridge()
         {
-            GLog.Debug("[WebGLBridge:Editor] InitializeReactBridge()");
+            GLog.Debug("[WebGLBridge] InitializeReactBridge()");
         }
 
         public static void InitializeReactBridgeRuntime()
         {
-            GLog.Debug("[WebGLBridge:Editor] InitializeReactBridgeRuntime()");
+            GLog.Debug("[WebGLBridge] InitializeReactBridgeRuntime()");
         }
 #endif
 
@@ -85,7 +85,7 @@ namespace Galashow.Bridge
             {
                 SendMessageToReact(jsonMessage);
 #if !UNITY_WEBGL || UNITY_EDITOR
-                GLog.Debug($"<color=magenta>[U2R] {jsonMessage}</color>");
+                GLog.Debug($"[MESSAGE - U2R] {jsonMessage}");
 #endif
             }
             catch (Exception e)

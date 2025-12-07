@@ -59,7 +59,6 @@ namespace Galashow.Trolley
             _isRunning = true;
 
             OnTimerStarted?.Invoke(duration);
-            GLog.Info($"[TrolleyTimerService] 타이머 시작: {duration}초");
         }
 
         /// <summary>
@@ -68,7 +67,6 @@ namespace Galashow.Trolley
         public void StopTimer()
         {
             _isRunning = false;
-            GLog.Info($"[TrolleyTimerService] 타이머 정지 (경과: {ElapsedTime:F2}초)");
         }
 
         /// <summary>
@@ -86,7 +84,6 @@ namespace Galashow.Trolley
             {
                 _isRunning = false;
                 OnTimerExpired?.Invoke();
-                GLog.Warn($"[TrolleyTimerService] 타이머 만료!");
                 return;
             }
 
@@ -103,7 +100,6 @@ namespace Galashow.Trolley
         public void ExtendTime(float additionalTime)
         {
             _duration += additionalTime;
-            GLog.Info($"[TrolleyTimerService] 시간 연장: +{additionalTime}초 (총: {_duration}초)");
         }
 
         /// <summary>
@@ -114,7 +110,6 @@ namespace Galashow.Trolley
             _isRunning = false;
             _startTime = 0;
             _duration = 0;
-            GLog.Info("[TrolleyTimerService] 타이머 리셋");
         }
 
         /// <summary>

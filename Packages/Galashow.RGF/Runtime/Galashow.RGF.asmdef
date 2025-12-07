@@ -3,7 +3,8 @@
     "rootNamespace": "Galashow.RGF",
     "references": [
         "GUID:a7d46dd5b7e984d47b857fd2c78ae0b4",
-        "GUID:e435a9eb6710d334c97375b1c1d6cc5d"
+        "GUID:e435a9eb6710d334c97375b1c1d6cc5d",
+        "GUID:6055be8ebefd69e48b49212b09b47b2f"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

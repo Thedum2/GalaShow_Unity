@@ -43,7 +43,7 @@ namespace Galashow.Bridge
 #if UNITY_WEBGL && !UNITY_EDITOR
             WebGLBridge.Init();
 #else
-            GLog.Debug("Running in non-WebGL environment, skipping WebGLBridge.Init()");
+            // Non-WebGL 환경에서는 WebGLBridge 초기화 스킵 (로그 불필요)
 #endif
         }
 
@@ -54,7 +54,7 @@ namespace Galashow.Bridge
             string route = handler.GetRoute();
             if (_messageHandlers.ContainsKey(route))
             {
-                GLog.Debug($"Handler for route '{route}' already exists. Overwriting...");
+                GLog.Warn($"[Bridge⚠] Handler '{route}' already exists, overwriting");
             }
 
             _messageHandlers[route] = handler;
@@ -62,14 +62,14 @@ namespace Galashow.Bridge
             if (handler is BaseMessageHandler baseHandler)
                 baseHandler.__BindSender(_sender);
 
-            GLog.Debug($"Registered handler for route: {route}");
+            GLog.Info($"[Bridge] Handler registered: {route}");
         }
 
         public void UnregisterHandler(string route)
         {
             if (_messageHandlers.Remove(route))
             {
-                GLog.Debug($"Unregistered handler for route: {route}");
+                GLog.Debug($"[Bridge] Handler unregistered: {route}");
             }
         }
 
@@ -83,33 +83,30 @@ namespace Galashow.Bridge
         #region Message Receiving (React -> Unity)
         public void ReceiveMessage(string jsonMessage)
         {
-            GLog.Debug($"<color=magenta>[R2U] {jsonMessage}</color>");
             try
             {
                 if (string.IsNullOrEmpty(jsonMessage))
                 {
-                    GLog.Debug("Received empty message");
+                    GLog.Warn("[Bridge⚠] Received empty message");
                     return;
                 }
 
                 var message = JsonConvert.DeserializeObject<Message>(jsonMessage);
                 if (message == null)
                 {
-                    GLog.Debug("Failed to deserialize message");
+                    GLog.Error("[Bridge✗] Failed to deserialize message");
                     return;
                 }
                 HandleIncomingMessage(message);
             }
             catch (Exception e)
             {
-                GLog.Debug($"Failed to parse incoming message: {e.Message}\nRaw message: {jsonMessage}");
+                GLog.Error($"[Bridge✗] Parse error: {e.Message}");
             }
         }
         private void HandleIncomingMessage(Message message)
         {
             string routeName = Util.ParseRoute(message.route).routeName;
-            string dataString = message.data == null ? "null" : message.data.ToString();
-            GLog.Debug($"Received message: {message.type} - {message.route} - {dataString}");
             OnMessageReceived?.Invoke(message);
 
             switch (message.type?.ToUpper())
@@ -124,7 +121,7 @@ namespace Galashow.Bridge
                     HandleNotify(routeName, message);
                     break;
                 default:
-                    GLog.Debug($"[BridgeManager] Unknown message type: {message.type}");
+                    GLog.Warn($"[Bridge⚠] Unknown message type: {message.type}");
                     break;
             }
         }
@@ -140,8 +137,7 @@ namespace Galashow.Bridge
             }
             else
             {
-                string error = $"No handler found for route: {message.route}";
-                GLog.Debug(error);
+                GLog.Warn($"[Bridge⚠] No handler for route: {message.route}");
                 SendAcknowledge(message.id, message.route, false, null);
             }
         }
@@ -160,7 +156,7 @@ namespace Galashow.Bridge
             }
             else
             {
-                GLog.Debug($"Received ACK for unknown request ID: {message.id}");
+                GLog.Debug($"[Bridge] Unknown ACK: {message.id}");
             }
         }
         private void HandleNotify(string route, Message message)
@@ -171,7 +167,7 @@ namespace Galashow.Bridge
             }
             else
             {
-                GLog.Debug($"No handler found for notification route: {message.route}");
+                GLog.Debug($"[Bridge] No handler for NTY: {message.route}");
             }
         }
 
@@ -221,7 +217,7 @@ namespace Galashow.Bridge
             }
             catch (Exception e)
             {
-                GLog.Debug($"Failed to send message to React: {e.Message}");
+                GLog.Error($"[Bridge✗] Send failed: {e.Message}");
             }
         }
 
@@ -295,7 +291,7 @@ namespace Galashow.Bridge
                     if (_pendingRequests.Remove(expired.requestId, out _))
                     {
                         expired.onTimeout?.Invoke();
-                        GLog.Debug($"Request timeout: {expired.requestId}");
+                        GLog.Warn($"[Bridge⚠] Request timeout: {expired.requestId}");
                     }
                 }
             }

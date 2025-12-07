@@ -1,0 +1,21 @@
+{
+  "id": "test_startround_001",
+  "type": "REQ",
+  "route": "RGFManager_StartRound",
+  "ok": true,
+  "data": {
+    "MiniGamePluginIdx": "PLUGIN_UUID_PLACEHOLDER",
+    "RoundNumber": 1,
+    "GameData": null,
+    "PhaseDuration": {
+      "Ready": 2,
+      "Setup": 1,
+      "Present": 3,
+      "Input": 5,
+      "Wait": 1,
+      "Execute": 2,
+      "Reveal": 3,
+      "Cleanup": 1
+    }
+  }
+}

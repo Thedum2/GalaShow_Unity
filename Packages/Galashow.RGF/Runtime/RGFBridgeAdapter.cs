@@ -31,7 +31,7 @@ namespace Galashow.RGF
             // RGFManager의 Phase 이벤트 구독
             SubscribeToRGFEvents();
 
-            GLog.Info("[RGFBridgeAdapter] Initialized and registered");
+            GLog.Info("[BRIDGE] RGFBridgeAdapter initialized");
         }
 
         private void OnDestroy()
@@ -86,14 +86,14 @@ namespace Galashow.RGF
 
         public void R2U_RGFManager_Initialize_REQ(
             Request.R2U.RGFInitialize data,
-            Action<Acknowledge.U2R.RGFInitialize> onSuccess,
-            Action<string> onError)
+                Action<Acknowledge.U2R.RGFInitialize> onSuccess,
+                Action<string> onError)
         {
-            GLog.Info($"[RGFBridgeAdapter] Initialize Request - SessionId: {data.SessionId}");
+            GLog.Info($"[BRIDGE→] Initialize - Session: {data.SessionId}, Players: {data.PlayerInfo?.Count ?? 0}");
 
             try
             {
-                // 진행도 알림: 0% (시작)
+                // 진행도 알림
                 _handler.InitializeProgress(0);
 
                 // 플레이어 정보 등록
@@ -108,27 +108,24 @@ namespace Galashow.RGF
                     }
                 }
 
-                // 진행도 알림: 50%
                 _handler.InitializeProgress(50);
 
                 // 설정 적용
                 if (data.Config != null)
                 {
-                    // Config 처리 (예: 디버그 로그 활성화 등)
-                    GLog.Info($"[RGFBridgeAdapter] Config - EnableDebugLog: {data.Config.EnableDebugLog}");
+                    // Config 처리
                 }
 
-                // 진행도 알림: 100% (완료)
                 _handler.InitializeProgress(100);
 
                 _isInitialized = true;
                 onSuccess?.Invoke(new Acknowledge.U2R.RGFInitialize(true, "1.0.0"));
 
-                GLog.Info("[RGFBridgeAdapter] Initialize completed successfully");
+                GLog.Info("[BRIDGE←] Initialize ACK");
             }
             catch (Exception ex)
             {
-                GLog.Error($"[RGFBridgeAdapter] Initialize failed: {ex.Message}");
+                GLog.Error($"[BRIDGE✗] Initialize failed: {ex.Message}");
                 onError?.Invoke(ex.Message);
             }
         }
@@ -138,7 +135,7 @@ namespace Galashow.RGF
             Action<List<Acknowledge.U2R.RGFRegisterPlugin>> onSuccess,
             Action<string> onError)
         {
-            GLog.Info($"[RGFBridgeAdapter] RegisterPlugin Request - Count: {data?.Count ?? 0}");
+            GLog.Info($"[BRIDGE→] RegisterPlugin - Count: {data?.Count ?? 0}");
 
             try
             {
@@ -146,10 +143,6 @@ namespace Galashow.RGF
 
                 foreach (var pluginRequest in data)
                 {
-                    // 플러그인 이름으로 동적 로딩 (여기서는 더미 플러그인 등록)
-                    // 실제로는 플러그인 팩토리를 통해 생성해야 함
-
-                    // 예시: Trolley 플러그인 등록
                     IGamePlugin plugin = CreatePluginByName(pluginRequest.MiniGameName);
 
                     if (plugin != null)
@@ -160,20 +153,19 @@ namespace Galashow.RGF
                             pluginRequest.MiniGameName,
                             pluginUuid
                         ));
-
-                        GLog.Info($"[RGFBridgeAdapter] Plugin registered: {pluginRequest.MiniGameName} -> {pluginUuid}");
                     }
                     else
                     {
-                        GLog.Warn($"[RGFBridgeAdapter] Plugin not found: {pluginRequest.MiniGameName}");
+                        GLog.Warn($"[BRIDGE⚠] Plugin not found: {pluginRequest.MiniGameName}");
                     }
                 }
 
                 onSuccess?.Invoke(results);
+                GLog.Info("[BRIDGE←] RegisterPlugin ACK");
             }
             catch (Exception ex)
             {
-                GLog.Error($"[RGFBridgeAdapter] RegisterPlugin failed: {ex.Message}");
+                GLog.Error($"[BRIDGE✗] RegisterPlugin failed: {ex.Message}");
                 onError?.Invoke(ex.Message);
             }
         }
@@ -183,7 +175,7 @@ namespace Galashow.RGF
             Action<Acknowledge.U2R.RGFStartRound> onSuccess,
             Action<string> onError)
         {
-            GLog.Info($"[RGFBridgeAdapter] StartRound Request - Plugin: {data.MiniGamePluginIdx}, Round: {data.RoundNumber}");
+            GLog.Info($"[BRIDGE→] StartRound - Round: {data.RoundNumber}");
 
             try
             {
@@ -202,14 +194,21 @@ namespace Galashow.RGF
                     rgfManager.SetPhaseDuration(GamePhase.CLEANUP, data.PhaseDuration.Cleanup);
                 }
 
-                // 먼저 ACK 응답
+                // ACK 응답
                 onSuccess?.Invoke(new Acknowledge.U2R.RGFStartRound(true, data.RoundNumber));
+                GLog.Info("[BRIDGE←] StartRound ACK");
 
                 // 라운드 시작 알림
                 var plugin = rgfManager.GetPlugin(data.MiniGamePluginIdx);
                 if (plugin != null)
                 {
                     _handler.RoundStarted(data.RoundNumber, data.MiniGamePluginIdx, plugin.GameName);
+                    GLog.Info("[BRIDGE←] RoundStarted NTY");
+                }
+                else
+                {
+                    GLog.Error($"[BRIDGE✗] Plugin not found: {data.MiniGamePluginIdx}");
+                    return;
                 }
 
                 // 라운드 실행 (비동기)
@@ -224,7 +223,7 @@ namespace Galashow.RGF
             }
             catch (Exception ex)
             {
-                GLog.Error($"[RGFBridgeAdapter] StartRound failed: {ex.Message}");
+                GLog.Error($"[BRIDGE✗] StartRound failed: {ex.Message}");
                 onError?.Invoke(ex.Message);
             }
         }
@@ -234,31 +233,27 @@ namespace Galashow.RGF
             Action<Acknowledge.U2R.RGFAbortRound> onSuccess,
             Action<string> onError)
         {
-            GLog.Info($"[RGFBridgeAdapter] AbortRound Request - Round: {data.RoundNumber}");
+            GLog.Info($"[BRIDGE→] AbortRound");
 
             try
             {
                 RGFManager.Instance.AbortRound();
                 onSuccess?.Invoke(new Acknowledge.U2R.RGFAbortRound(true, data.RoundNumber));
+                GLog.Info("[BRIDGE←] AbortRound ACK");
             }
             catch (Exception ex)
             {
-                GLog.Error($"[RGFBridgeAdapter] AbortRound failed: {ex.Message}");
+                GLog.Error($"[BRIDGE✗] AbortRound failed: {ex.Message}");
                 onError?.Invoke(ex.Message);
             }
         }
 
         public void R2U_RGFManager_ChatInput_NTY(Notify.R2U.RGFChatInput data)
         {
-            GLog.Debug($"[RGFBridgeAdapter] ChatInput Notify - Round: {data.RoundNumber}, Count: {data.ChatInfo?.Count ?? 0}");
-
             // 채팅 입력 처리 (현재는 로그만)
             if (data.ChatInfo != null)
             {
-                foreach (var chat in data.ChatInfo)
-                {
-                    GLog.Debug($"[Chat] Player {chat.PlayerIdx}: {chat.Message}");
-                }
+                GLog.Debug($"[BRIDGE→] Chat - {data.ChatInfo.Count} messages");
             }
         }
 
@@ -274,13 +269,13 @@ namespace Galashow.RGF
             // 여기서는 더미 데이터를 위한 간단한 구현
             switch (gameName)
             {
-                case "TrolleyDilemma":
+                case "DummyGame":
                     // Trolley 플러그인은 별도 패키지에 있으므로
                     // 여기서는 null 반환 (실제로는 DI나 팩토리를 통해 생성)
                     return null;
 
                 default:
-                    GLog.Warn($"[RGFBridgeAdapter] Unknown game plugin: {gameName}");
+                    GLog.Warn($"[BRIDGE⚠] Unknown game plugin: {gameName}");
                     return null;
             }
         }
@@ -292,7 +287,7 @@ namespace Galashow.RGF
 
             if (plugin == null)
             {
-                GLog.Warn("[RGFBridgeAdapter] Cannot send RoundCompleted: plugin not found");
+                GLog.Warn("[BRIDGE⚠] Cannot send RoundCompleted: plugin not found");
                 return;
             }
 
@@ -312,7 +307,7 @@ namespace Galashow.RGF
 
             _handler.RoundCompleted(roundNumber, pluginIdx, plugin.GameName, result);
 
-            GLog.Info($"[RGFBridgeAdapter] RoundCompleted sent - Round: {roundNumber}, Survivors: {alivePlayers.Count}");
+            GLog.Info($"[BRIDGE←] RoundCompleted NTY - Survivors: {alivePlayers.Count}/{state.Players.Count}");
         }
 
         #endregion

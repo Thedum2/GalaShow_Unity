@@ -23,7 +23,6 @@ namespace Galashow.Trolley
         public void Initialize(TrolleyGameData gameData)
         {
             _currentGameData = gameData;
-            GLog.Info("[TrolleyUIService] UI 초기화 완료");
         }
 
         /// <summary>
@@ -33,12 +32,12 @@ namespace Galashow.Trolley
         {
             if (_currentGameData == null)
             {
-                GLog.Error("[TrolleyUIService] 게임 데이터가 없습니다");
+                GLog.Error("[Trolley✗] Game data not found");
                 return;
             }
 
             CurrentMessage = $"[문제 제시]\n{_currentGameData.Title}\n{_currentGameData.Description}";
-            GLog.Info($"[TrolleyUIService] 문제 표시: {_currentGameData.Title}");
+            GLog.Debug($"[Trolley] Problem: {_currentGameData.Title}");
         }
 
         /// <summary>
@@ -51,11 +50,7 @@ namespace Galashow.Trolley
                 return;
             }
 
-            GLog.Info("[TrolleyUIService] 선택지 표시:");
-            foreach (var choice in _currentGameData.Choices)
-            {
-                GLog.Info($"  - [{choice.Id}] {choice.Text}: {choice.Description}");
-            }
+            GLog.Debug($"[Trolley] Choices displayed: {_currentGameData.Choices.Count}");
         }
 
         /// <summary>
@@ -64,7 +59,7 @@ namespace Galashow.Trolley
         public void ShowSelectionProgress(int selectedCount, int totalPlayers)
         {
             float progress = totalPlayers > 0 ? (float)selectedCount / totalPlayers : 0;
-            GLog.Info($"[TrolleyUIService] 선택 진행률: {selectedCount}/{totalPlayers} ({progress:P0})");
+            GLog.Debug($"[Trolley] Selection: {selectedCount}/{totalPlayers} ({progress:P0})");
         }
 
         /// <summary>
@@ -78,7 +73,6 @@ namespace Galashow.Trolley
             }
 
             CurrentMessage = $"[결과 발표]\n생존율: {result.SurvivalRate:P0}\n생존자: {result.Survivors.Count}명\n탈락자: {result.Eliminated.Count}명";
-            GLog.Info($"[TrolleyUIService] 결과 표시: 생존율 {result.SurvivalRate:P0}");
         }
 
         /// <summary>
@@ -87,7 +81,7 @@ namespace Galashow.Trolley
         public void ShowMessage(string message)
         {
             CurrentMessage = message;
-            GLog.Info($"[TrolleyUIService] 메시지: {message}");
+            GLog.Debug($"[Trolley] UI: {message}");
         }
 
         /// <summary>
@@ -96,7 +90,6 @@ namespace Galashow.Trolley
         public void Clear()
         {
             CurrentMessage = string.Empty;
-            GLog.Info("[TrolleyUIService] UI 정리 완료");
         }
     }
 }
