@@ -121,6 +121,10 @@ namespace Galashow.RGF
                 _isInitialized = true;
                 onSuccess?.Invoke(new Acknowledge.U2R.RGFInitialize(true, "1.0.0"));
 
+                // RGFFlowTestExample에 성공 알림
+                var testExample = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                testExample?.OnInitializeSuccess();
+
                 GLog.Info("[BRIDGE←] Initialize ACK");
             }
             catch (Exception ex)
@@ -148,6 +152,14 @@ namespace Galashow.RGF
                     if (plugin != null)
                     {
                         string pluginUuid = RGFManager.Instance.RegisterPlugin(plugin);
+
+                        // DummyGamePlugin인 경우 RGFFlowTestExample에 UUID 전달
+                        if (pluginRequest.MiniGameName == "DummyGame")
+                        {
+                            var testExample = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                            testExample?.SetPluginUuid(pluginUuid);
+                        }
+
                         results.Add(new Acknowledge.U2R.RGFRegisterPlugin(
                             pluginRequest.MiniGameIdx,
                             pluginRequest.MiniGameName,
@@ -161,6 +173,11 @@ namespace Galashow.RGF
                 }
 
                 onSuccess?.Invoke(results);
+
+                // RGFFlowTestExample에 성공 알림
+                var testExample = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                testExample?.OnRegisterPluginSuccess();
+
                 GLog.Info("[BRIDGE←] RegisterPlugin ACK");
             }
             catch (Exception ex)
@@ -196,6 +213,11 @@ namespace Galashow.RGF
 
                 // ACK 응답
                 onSuccess?.Invoke(new Acknowledge.U2R.RGFStartRound(true, data.RoundNumber));
+
+                // RGFFlowTestExample에 성공 알림
+                var testExample = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                testExample?.OnStartRoundSuccess();
+
                 GLog.Info("[BRIDGE←] StartRound ACK");
 
                 // 라운드 시작 알림
@@ -270,9 +292,19 @@ namespace Galashow.RGF
             switch (gameName)
             {
                 case "DummyGame":
-                    // Trolley 플러그인은 별도 패키지에 있으므로
-                    // 여기서는 null 반환 (실제로는 DI나 팩토리를 통해 생성)
-                    return null;
+                    // RGFFlowTestExample을 찾아서 DummyGamePlugin 생성
+                    var testExample = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                    if (testExample != null)
+                    {
+                        var plugin = new DummyGamePlugin(testExample);
+                        GLog.Info($"[BRIDGE] DummyGamePlugin created for RGFFlowTestExample");
+                        return plugin;
+                    }
+                    else
+                    {
+                        GLog.Warn($"[BRIDGE⚠] RGFFlowTestExample not found in scene");
+                        return null;
+                    }
 
                 default:
                     GLog.Warn($"[BRIDGE⚠] Unknown game plugin: {gameName}");

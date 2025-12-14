@@ -9,24 +9,17 @@ using Newtonsoft.Json.Linq;
 namespace Galashow.RGF
 {
     /// <summary>
-    /// RGF 플로우 테스트 예제
-    /// Native 역할을 시뮬레이션하여 전체 RGF 플로우를 테스트
+    /// RGF 플로우 모니터링
+    /// 실제 Native에서 오는 RGF 메시지를 받아 UI에 표시
     ///
-    /// 실제 Native에서 데이터가 온다고 가정하고 동작:
-    /// 1. Initialize (InitializeProgress 0% → 50% → 100% → Initialize ACK)
-    /// 2. RegisterPlugin (RegisterPlugin ACK)
-    /// 3. StartRound (StartRound ACK → RoundStarted NTY)
-    /// 4. Phase 순회 (각 Phase마다 Started → Ended → Changed 알림)
-    /// 5. INPUT Phase에서 플레이어 선택 시뮬레이션
-    /// 6. RoundCompleted NTY
+    /// 동작:
+    /// 1. Phase 이벤트 구독하여 현재 상태 모니터링
+    /// 2. UI를 통해 게임 진행 상황 표시
+    /// 3. 플레이어 선택 및 결과를 화면에 표시
     /// </summary>
     public class RGFFlowTestExample : MonoBehaviour
     {
-        [Header("테스트 설정")]
-        [SerializeField] private bool autoStart = false;
-        [SerializeField] private float delayBetweenSteps = 1f;
-
-        [Header("JSON 메시지 파일")]
+        [Header("네이티브 샘플 테스트용 JSON")]
         [SerializeField] private TextAsset initializeJson;
         [SerializeField] private TextAsset registerPluginJson;
         [SerializeField] private TextAsset startRoundJson;
@@ -36,9 +29,12 @@ namespace Galashow.RGF
         [SerializeField] private TMP_Text _progressText;
         [SerializeField] private bool enableDetailedInfo = true;
 
-        private string _currentPluginUuid;
-        private int _currentTestStep = 0;
-        private bool _isTestRunning = false;
+        private string _testPluginUuid;
+
+        // 진행 상황 추적
+        private bool _isInitialized = false;
+        private bool _isPluginRegistered = false;
+        private bool _isRoundStarted = false;
 
         // 플레이어 선택 정보 저장
         public System.Collections.Generic.Dictionary<string, int> _playerChoices = new System.Collections.Generic.Dictionary<string, int>();
@@ -51,17 +47,14 @@ namespace Galashow.RGF
             var adapter = RGFBridgeAdapter.Instance;
             if (adapter == null)
             {
-                GLog.Error("[Test✗] RGFBridgeAdapter initialization failed");
+                GLog.Error("[RGFMonitor] RGFBridgeAdapter initialization failed");
                 return;
             }
 
             // Phase 이벤트 구독
             RegisterPhaseEvents();
 
-            if (autoStart)
-            {
-                RunExample();
-            }
+            GLog.Info("[RGFMonitor] RGF 플로우 모니터링 시작 - Native 메시지 대기 중");
         }
 
         private void Update()
@@ -70,143 +63,140 @@ namespace Galashow.RGF
         }
 
         /// <summary>
-        /// 전체 플로우 테스트 실행 (코루틴 사용)
+        /// 플러그인 UUID 설정 (RGFBridgeAdapter에서 호출)
         /// </summary>
-        [ContextMenu("Run Full Flow Test")]
-        public void RunExample()
+        public void SetPluginUuid(string uuid)
         {
-            if (_isTestRunning)
-            {
-                GLog.Warn("[RGFFlowTest] Test is already running!");
-                return;
-            }
-
-            StartCoroutine(RunFullFlowTest());
-        }
-
-        private IEnumerator RunFullFlowTest()
-        {
-            _isTestRunning = true;
-            _currentTestStep = 0;
-
-            // 데이터 초기화
-            _playerChoices.Clear();
-            _survivors.Clear();
-            _eliminated.Clear();
-
-            GLog.Info("[Test] ===== RGF Flow Test Start =====");
-
-            // 1단계: Initialize
-            _currentTestStep = 1;
-            bool initComplete = false;
-            StartCoroutine(TestInitialize(() => initComplete = true));
-            yield return new WaitUntil(() => initComplete);
-            yield return new WaitForSeconds(delayBetweenSteps);
-
-            // 2단계: RegisterPlugin
-            _currentTestStep = 2;
-            bool registerComplete = false;
-            StartCoroutine(TestRegisterPlugin(() => registerComplete = true));
-            yield return new WaitUntil(() => registerComplete);
-            yield return new WaitForSeconds(delayBetweenSteps);
-
-            // 3단계: StartRound (Phase 순회 포함)
-            _currentTestStep = 3;
-
-            // INPUT Phase에서 플레이어 입력 시뮬레이션
-            StartCoroutine(SimulatePlayerInputs());
-
-            bool roundComplete = false;
-            StartCoroutine(TestStartRound(() => roundComplete = true));
-            yield return new WaitUntil(() => roundComplete);
-
-            _currentTestStep = 4;
-            GLog.Info("[Test] ===== RGF Flow Test Complete =====");
-
-            LogTestResults();
-
-            _isTestRunning = false;
+            _testPluginUuid = uuid;
+            GLog.Info($"[RGFMonitor] Plugin UUID set: {uuid}");
         }
 
         /// <summary>
-        /// 1. Initialize 테스트
-        /// Native에서 BridgeManager.ReceiveMessage를 통해 JSON 메시지가 온다고 가정
-        /// RGFBridgeAdapter의 R2U_RGFManager_Initialize_REQ가 호출되고 콜백이 실행됨
+        /// Initialize 성공 콜백 (RGFBridgeAdapter에서 호출)
         /// </summary>
-        private IEnumerator TestInitialize(System.Action onComplete)
+        public void OnInitializeSuccess()
+        {
+            _isInitialized = true;
+            GLog.Info($"[RGFMonitor] Initialize completed successfully");
+        }
+
+        /// <summary>
+        /// RegisterPlugin 성공 콜백 (RGFBridgeAdapter에서 호출)
+        /// </summary>
+        public void OnRegisterPluginSuccess()
+        {
+            _isPluginRegistered = true;
+            GLog.Info($"[RGFMonitor] RegisterPlugin completed successfully");
+        }
+
+        /// <summary>
+        /// StartRound 성공 콜백 (RGFBridgeAdapter에서 호출)
+        /// </summary>
+        public void OnStartRoundSuccess()
+        {
+            _isRoundStarted = true;
+            GLog.Info($"[RGFMonitor] StartRound completed successfully");
+        }
+
+        #region Native Sample Message Sender
+
+        /// <summary>
+        /// 네이티브 샘플: Initialize 메시지 전송
+        /// </summary>
+        [ContextMenu("Send Native Sample: Initialize")]
+        public void SendNativeSample_Initialize()
         {
             if (initializeJson == null)
             {
-                GLog.Error("[Test✗] Initialize JSON file not assigned");
-                onComplete?.Invoke();
-                yield break;
+                GLog.Error("[NativeSample] Initialize JSON file not assigned");
+                return;
             }
 
-            // Native에서 JSON 메시지 전송 시뮬레이션
-            string jsonMessage = initializeJson.text;
-            GLog.Info($"[Test] Step 1: Initialize");
-            BridgeManager.Instance.ReceiveMessage(jsonMessage);
-
-            yield return null;
-            onComplete?.Invoke();
+            GLog.Info("[NativeSample] Sending Initialize message...");
+            BridgeManager.Instance.ReceiveMessage(initializeJson.text);
         }
 
         /// <summary>
-        /// 2. RegisterPlugin 테스트
-        /// Native에서 BridgeManager.ReceiveMessage를 통해 JSON 메시지가 온다고 가정
-        /// RGFBridgeAdapter의 R2U_RGFManager_RegisterPlugin_REQ가 호출되고 콜백이 실행됨
+        /// 네이티브 샘플: RegisterPlugin 메시지 전송
         /// </summary>
-        private IEnumerator TestRegisterPlugin(System.Action onComplete)
+        [ContextMenu("Send Native Sample: RegisterPlugin")]
+        public void SendNativeSample_RegisterPlugin()
         {
             if (registerPluginJson == null)
             {
-                GLog.Error("[Test✗] RegisterPlugin JSON file not assigned");
-                onComplete?.Invoke();
-                yield break;
+                GLog.Error("[NativeSample] RegisterPlugin JSON file not assigned");
+                return;
             }
 
-            // 먼저 더미 플러그인을 Unity 쪽에서 등록
-            var dummyPlugin = new DummyGamePlugin(this);
-            _currentPluginUuid = RGFManager.Instance.RegisterPlugin(dummyPlugin);
-
-            // Native에서 JSON 메시지 전송 시뮬레이션
-            string jsonMessage = registerPluginJson.text;
-            GLog.Info($"[Test] Step 2: RegisterPlugin");
-            BridgeManager.Instance.ReceiveMessage(jsonMessage);
-
-            yield return null;
-            onComplete?.Invoke();
+            // 네이티브에서 보내는 RegisterPlugin 메시지 시뮬레이션
+            GLog.Info("[NativeSample] Sending RegisterPlugin message...");
+            BridgeManager.Instance.ReceiveMessage(registerPluginJson.text);
         }
 
         /// <summary>
-        /// 3. StartRound 테스트 (Phase 순회 포함)
-        /// Native에서 BridgeManager.ReceiveMessage를 통해 JSON 메시지가 온다고 가정
-        /// RGFBridgeAdapter의 R2U_RGFManager_StartRound_REQ가 호출되고 콜백이 실행됨
+        /// 네이티브 샘플: StartRound 메시지 전송
         /// </summary>
-        private IEnumerator TestStartRound(System.Action onComplete)
+        [ContextMenu("Send Native Sample: StartRound")]
+        public void SendNativeSample_StartRound()
         {
             if (startRoundJson == null)
             {
-                GLog.Error("[Test✗] StartRound JSON file not assigned");
-                onComplete?.Invoke();
-                yield break;
+                GLog.Error("[NativeSample] StartRound JSON file not assigned");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(_testPluginUuid))
+            {
+                GLog.Error("[NativeSample] Plugin not registered yet. Please send RegisterPlugin first.");
+                return;
             }
 
             // JSON 파일 로드 및 플러그인 UUID 치환
             string jsonMessage = startRoundJson.text;
-            jsonMessage = jsonMessage.Replace("PLUGIN_UUID_PLACEHOLDER", _currentPluginUuid);
+            jsonMessage = jsonMessage.Replace("PLUGIN_UUID_PLACEHOLDER", _testPluginUuid);
 
-            // Native에서 JSON 메시지 전송 시뮬레이션
-            GLog.Info($"[Test] Step 3: StartRound");
+            // 플레이어 입력 시뮬레이션 시작 (INPUT Phase에서 자동으로 선택 등록)
+            StartCoroutine(SimulatePlayerInputs());
+
+            GLog.Info("[NativeSample] Sending StartRound message...");
             BridgeManager.Instance.ReceiveMessage(jsonMessage);
-
-            yield return null;
-
-            // 라운드 완료 대기
-            yield return new WaitUntil(() => !RGFManager.Instance.IsRunning);
-
-            onComplete?.Invoke();
         }
+
+        /// <summary>
+        /// 플레이어 입력 시뮬레이션 (테스트용)
+        /// INPUT Phase가 시작되면 자동으로 플레이어 선택 등록
+        /// </summary>
+        private IEnumerator SimulatePlayerInputs()
+        {
+            // 기존 데이터 초기화
+            _playerChoices.Clear();
+            _survivors.Clear();
+            _eliminated.Clear();
+
+            // INPUT Phase까지 대기
+            yield return new WaitUntil(() =>
+                RGFManager.Instance.State.CurrentPhase == GamePhase.INPUT
+            );
+
+            GLog.Info("[NativeSample] Simulating player inputs...");
+
+            // 플레이어들의 선택 시뮬레이션 (1 또는 2 선택)
+            yield return new WaitForSeconds(0.5f);
+            _playerChoices["Player 1"] = 1;
+            GLog.Info("[NativeSample] Player 1 선택: 1");
+
+            yield return new WaitForSeconds(0.5f);
+            _playerChoices["Player 2"] = 2;
+            GLog.Info("[NativeSample] Player 2 선택: 2");
+
+            yield return new WaitForSeconds(0.5f);
+            _playerChoices["Player 3"] = 1;
+            GLog.Info("[NativeSample] Player 3 선택: 1");
+
+            GLog.Info("[NativeSample] Player inputs complete");
+        }
+
+        #endregion
 
         #region Phase Events
 
@@ -242,39 +232,6 @@ namespace Galashow.RGF
 
         #endregion
 
-        #region Player Input Simulation
-
-        /// <summary>
-        /// 플레이어 입력 시뮬레이션 (Native에서 오는 데이터라고 가정)
-        /// INPUT Phase가 시작되면 자동으로 플레이어 선택 등록
-        /// </summary>
-        private IEnumerator SimulatePlayerInputs()
-        {
-            // INPUT Phase까지 대기
-            yield return new WaitUntil(() =>
-                RGFManager.Instance.State.CurrentPhase == GamePhase.INPUT
-            );
-
-            GLog.Info("[Test] Simulating player inputs...");
-
-            // 플레이어들의 선택 시뮬레이션 (1 또는 2 선택)
-            yield return new WaitForSeconds(0.5f);
-            _playerChoices["Player 1"] = 1;
-            GLog.Info("[Test] Player 1 선택: 1");
-
-            yield return new WaitForSeconds(0.5f);
-            _playerChoices["Player 2"] = 2;
-            GLog.Info("[Test] Player 2 선택: 2");
-
-            yield return new WaitForSeconds(0.5f);
-            _playerChoices["Player 3"] = 1;
-            GLog.Info("[Test] Player 3 선택: 1");
-
-            GLog.Info("[Test] Player inputs complete");
-        }
-
-        #endregion
-
         #region UI Update
 
         /// <summary>
@@ -294,10 +251,40 @@ namespace Galashow.RGF
                 return;
             }
 
-            // 테스트가 실행 중이 아니면 대기 메시지
-            if (!_isTestRunning)
+            // RGF가 실행 중이 아니면 진행 상황 표시
+            if (!RGFManager.Instance.IsRunning)
             {
-                _statusText.text = "<size=70><b>RGF TEST</b></size>\n<size=60><b>RGF 테스트</b></size>\n<size=50><color=yellow>WAITING</color></size>\n<size=30>[Run Full Flow Test] 메뉴 실행</size>";
+                var text = new System.Text.StringBuilder();
+                text.AppendLine("<size=70><b>RGF MONITOR</b></size>");
+                text.AppendLine("<size=60><b>RGF 모니터</b></size>");
+                text.AppendLine();
+
+                // 진행 상황 체크리스트
+                text.AppendLine("<size=50>=== 진행 상황 ===</size>");
+                text.AppendLine($"<size=45>{(_isInitialized ? "<color=green>✓</color>" : "<color=red>✗</color>")} Initialize</size>");
+                text.AppendLine($"<size=45>{(_isPluginRegistered ? "<color=green>✓</color>" : "<color=red>✗</color>")} Register Plugin</size>");
+                text.AppendLine($"<size=45>{(_isRoundStarted ? "<color=green>✓</color>" : "<color=red>✗</color>")} Start Round</size>");
+
+                text.AppendLine();
+                if (!_isInitialized)
+                {
+                    text.AppendLine("<size=40><color=yellow>Initialize 버튼 클릭</color></size>");
+                }
+                else if (!_isPluginRegistered)
+                {
+                    text.AppendLine("<size=40><color=yellow>RegisterPlugin 버튼 클릭</color></size>");
+                }
+                else if (!_isRoundStarted)
+                {
+                    text.AppendLine("<size=40><color=yellow>StartRound 버튼 클릭</color></size>");
+                }
+                else
+                {
+                    text.AppendLine("<size=40><color=yellow>라운드 진행 대기 중...</color></size>");
+                }
+
+                _statusText.text = text.ToString();
+
                 if (_progressText != null)
                 {
                     _progressText.text = "";
@@ -327,85 +314,76 @@ namespace Galashow.RGF
             var state = RGFManager.Instance.State;
             var isRunning = RGFManager.Instance.IsRunning;
 
-            if (isRunning)
+            // 현재 Phase를 크게 표시 (영어 + 한글)
+            text.AppendLine($"<size=100><b>{state.CurrentPhase}</b></size>");
+            text.AppendLine($"<size=80><b>{GetPhaseSimpleName(state.CurrentPhase)}</b></size>");
+
+            // Round 번호
+            text.AppendLine($"<size=60>ROUND {state.CurrentRound}</size>");
+
+            // 남은 시간 계산
+            float elapsedTime = Time.time - state.PhaseStartTime;
+            float remainingTime = Mathf.Max(0, state.PhaseDuration - elapsedTime);
+
+            if (state.PhaseDuration > 0)
             {
-                // 현재 Phase를 크게 표시 (영어 + 한글)
-                text.AppendLine($"<size=100><b>{state.CurrentPhase}</b></size>");
-                text.AppendLine($"<size=80><b>{GetPhaseSimpleName(state.CurrentPhase)}</b></size>");
-
-                // Round 번호
-                text.AppendLine($"<size=60>ROUND {state.CurrentRound}</size>");
-
-                // 남은 시간 계산
-                float elapsedTime = Time.time - state.PhaseStartTime;
-                float remainingTime = Mathf.Max(0, state.PhaseDuration - elapsedTime);
-
-                if (state.PhaseDuration > 0)
-                {
-                    text.AppendLine($"<size=90><b>{remainingTime:F1}초</b></size>");
-                }
-
-                // Phase별 상세 정보
-                if (enableDetailedInfo)
-                {
-                    text.AppendLine();
-                    switch (state.CurrentPhase)
-                    {
-                        case GamePhase.INPUT:
-                            // 입력 중인 정보 표시
-                            text.AppendLine($"<size=50>=== 선택 현황 ===</size>");
-                            foreach (var choice in _playerChoices)
-                            {
-                                text.AppendLine($"<size=45>{choice.Key}: <b>{choice.Value}</b></size>");
-                            }
-                            break;
-
-                        case GamePhase.EXECUTE:
-                            // 결과 계산 중 표시
-                            text.AppendLine($"<size=50>=== 결과 계산 중 ===</size>");
-                            if (_survivors.Count > 0 || _eliminated.Count > 0)
-                            {
-                                text.AppendLine($"<size=45>생존: {_survivors.Count}명 / 탈락: {_eliminated.Count}명</size>");
-                            }
-                            break;
-
-                        case GamePhase.REVEAL:
-                            // 결과 발표
-                            text.AppendLine($"<size=50>=== 최종 결과 ===</size>");
-                            if (_survivors.Count > 0)
-                            {
-                                text.AppendLine($"<size=45><color=green>생존자</color></size>");
-                                foreach (var survivor in _survivors)
-                                {
-                                    var choice = _playerChoices.ContainsKey(survivor) ? _playerChoices[survivor] : 0;
-                                    text.AppendLine($"<size=40>  {survivor} (선택: {choice})</size>");
-                                }
-                            }
-                            if (_eliminated.Count > 0)
-                            {
-                                text.AppendLine($"<size=45><color=red>탈락자</color></size>");
-                                foreach (var elim in _eliminated)
-                                {
-                                    var choice = _playerChoices.ContainsKey(elim) ? _playerChoices[elim] : 0;
-                                    text.AppendLine($"<size=40>  {elim} (선택: {choice})</size>");
-                                }
-                            }
-                            break;
-
-                        default:
-                            // 기본 플레이어 정보
-                            var alivePlayers = state.GetAlivePlayers();
-                            var eliminatedPlayers = state.GetEliminatedPlayers();
-                            text.AppendLine($"<size=50>생존 <color=green>{alivePlayers.Count}</color> / 탈락 <color=red>{eliminatedPlayers.Count}</color></size>");
-                            break;
-                    }
-                }
+                text.AppendLine($"<size=90><b>{remainingTime:F1}초</b></size>");
             }
-            else
+
+            // Phase별 상세 정보
+            if (enableDetailedInfo)
             {
-                // 테스트 단계 표시
-                text.AppendLine($"<size=70><b>{GetCurrentStepName()}</b></size>");
-                text.AppendLine($"<size=50>Step {_currentTestStep}/4</size>");
+                text.AppendLine();
+                switch (state.CurrentPhase)
+                {
+                    case GamePhase.INPUT:
+                        // 입력 중인 정보 표시
+                        text.AppendLine($"<size=50>=== 선택 현황 ===</size>");
+                        foreach (var choice in _playerChoices)
+                        {
+                            text.AppendLine($"<size=45>{choice.Key}: <b>{choice.Value}</b></size>");
+                        }
+                        break;
+
+                    case GamePhase.EXECUTE:
+                        // 결과 계산 중 표시
+                        text.AppendLine($"<size=50>=== 결과 계산 중 ===</size>");
+                        if (_survivors.Count > 0 || _eliminated.Count > 0)
+                        {
+                            text.AppendLine($"<size=45>생존: {_survivors.Count}명 / 탈락: {_eliminated.Count}명</size>");
+                        }
+                        break;
+
+                    case GamePhase.REVEAL:
+                        // 결과 발표
+                        text.AppendLine($"<size=50>=== 최종 결과 ===</size>");
+                        if (_survivors.Count > 0)
+                        {
+                            text.AppendLine($"<size=45><color=green>생존자</color></size>");
+                            foreach (var survivor in _survivors)
+                            {
+                                var choice = _playerChoices.ContainsKey(survivor) ? _playerChoices[survivor] : 0;
+                                text.AppendLine($"<size=40>  {survivor} (선택: {choice})</size>");
+                            }
+                        }
+                        if (_eliminated.Count > 0)
+                        {
+                            text.AppendLine($"<size=45><color=red>탈락자</color></size>");
+                            foreach (var elim in _eliminated)
+                            {
+                                var choice = _playerChoices.ContainsKey(elim) ? _playerChoices[elim] : 0;
+                                text.AppendLine($"<size=40>  {elim} (선택: {choice})</size>");
+                            }
+                        }
+                        break;
+
+                    default:
+                        // 기본 플레이어 정보
+                        var alivePlayers = state.GetAlivePlayers();
+                        var eliminatedPlayers = state.GetEliminatedPlayers();
+                        text.AppendLine($"<size=50>생존 <color=green>{alivePlayers.Count}</color> / 탈락 <color=red>{eliminatedPlayers.Count}</color></size>");
+                        break;
+                }
             }
 
             return text.ToString();
@@ -438,19 +416,6 @@ namespace Galashow.RGF
             return text.ToString();
         }
 
-        private string GetCurrentStepName()
-        {
-            switch (_currentTestStep)
-            {
-                case 0: return "초기화 중...";
-                case 1: return "초기화";
-                case 2: return "플러그인 등록";
-                case 3: return "라운드 진행";
-                case 4: return "테스트 완료";
-                default: return "알 수 없음";
-            }
-        }
-
         private string GetPhaseSimpleName(GamePhase phase)
         {
             switch (phase)
@@ -471,31 +436,6 @@ namespace Galashow.RGF
                     return "결과 발표";
                 case GamePhase.CLEANUP:
                     return "정리";
-                default:
-                    return phase.ToString();
-            }
-        }
-
-        private string GetPhaseDisplayName(GamePhase phase)
-        {
-            switch (phase)
-            {
-                case GamePhase.READY:
-                    return "READY 준비 단계";
-                case GamePhase.SETUP:
-                    return "SETUP 설정 단계";
-                case GamePhase.PRESENT:
-                    return "PRESENT 문제 제시";
-                case GamePhase.INPUT:
-                    return "INPUT 입력 대기";
-                case GamePhase.WAIT:
-                    return "WAIT 입력 마감";
-                case GamePhase.EXECUTE:
-                    return "EXECUTE 결과 계산";
-                case GamePhase.REVEAL:
-                    return "REVEAL 결과 발표";
-                case GamePhase.CLEANUP:
-                    return "CLEANUP 정리 단계";
                 default:
                     return phase.ToString();
             }
