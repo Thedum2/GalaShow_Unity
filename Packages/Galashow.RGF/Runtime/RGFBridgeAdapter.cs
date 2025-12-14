@@ -122,8 +122,8 @@ namespace Galashow.RGF
                 onSuccess?.Invoke(new Acknowledge.U2R.RGFInitialize(true, "1.0.0"));
 
                 // RGFFlowTestExample에 성공 알림
-                var testExample = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
-                testExample?.OnInitializeSuccess();
+                var flowTestMonitor = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                flowTestMonitor?.OnInitializeSuccess();
 
                 GLog.Info("[BRIDGE←] Initialize ACK");
             }
@@ -156,8 +156,9 @@ namespace Galashow.RGF
                         // DummyGamePlugin인 경우 RGFFlowTestExample에 UUID 전달
                         if (pluginRequest.MiniGameName == "DummyGame")
                         {
-                            var testExample = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
-                            testExample?.SetPluginUuid(pluginUuid);
+                            var flowTestMonitor = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                            flowTestMonitor?.OnRegisterPluginSuccess();
+                            flowTestMonitor?.SetPluginUuid(pluginUuid);
                         }
 
                         results.Add(new Acknowledge.U2R.RGFRegisterPlugin(
@@ -173,10 +174,6 @@ namespace Galashow.RGF
                 }
 
                 onSuccess?.Invoke(results);
-
-                // RGFFlowTestExample에 성공 알림
-                var testExample = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
-                testExample?.OnRegisterPluginSuccess();
 
                 GLog.Info("[BRIDGE←] RegisterPlugin ACK");
             }
@@ -215,8 +212,8 @@ namespace Galashow.RGF
                 onSuccess?.Invoke(new Acknowledge.U2R.RGFStartRound(true, data.RoundNumber));
 
                 // RGFFlowTestExample에 성공 알림
-                var testExample = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
-                testExample?.OnStartRoundSuccess();
+                var flowTestMonitor = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                flowTestMonitor?.OnStartRoundSuccess();
 
                 GLog.Info("[BRIDGE←] StartRound ACK");
 
@@ -293,10 +290,10 @@ namespace Galashow.RGF
             {
                 case "DummyGame":
                     // RGFFlowTestExample을 찾아서 DummyGamePlugin 생성
-                    var testExample = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
-                    if (testExample != null)
+                    var flowTestMonitor = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                    if (flowTestMonitor != null)
                     {
-                        var plugin = new DummyGamePlugin(testExample);
+                        var plugin = new DummyGamePlugin(flowTestMonitor);
                         GLog.Info($"[BRIDGE] DummyGamePlugin created for RGFFlowTestExample");
                         return plugin;
                     }
