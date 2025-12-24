@@ -97,6 +97,7 @@ namespace Galashow.Bridge
                     GLog.Error("[Bridge✗] Failed to deserialize message");
                     return;
                 }
+                GLog.Debug($"[MESSAGE - R2U] {jsonMessage}");
                 HandleIncomingMessage(message);
             }
             catch (Exception e)

@@ -17,7 +17,7 @@ namespace Galashow.Bridge
         
         public static void SendMessageToReact(string jsonMessage)
         {
-            GLog.Debug($"[MESSAGE - R2U] {jsonMessage}");
+            GLog.Debug($"[MESSAGE - U2R] {jsonMessage}");
         }
 
         public static int IsReactBridgeReady()
@@ -84,9 +84,6 @@ namespace Galashow.Bridge
             try
             {
                 SendMessageToReact(jsonMessage);
-#if !UNITY_WEBGL || UNITY_EDITOR
-                GLog.Debug($"[MESSAGE - U2R] {jsonMessage}");
-#endif
             }
             catch (Exception e)
             {

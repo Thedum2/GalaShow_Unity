@@ -505,32 +505,32 @@ namespace Galashow.RGF
         public async Task OnReadyAsync(GameState state)
         {
             GLog.Info($"[DummyGame] READY Phase - Round {state.CurrentRound}");
-            await Task.Delay(100);
+            await Task.CompletedTask;
         }
 
         public async Task OnSetupAsync(GameState state)
         {
             GLog.Info($"[DummyGame] SETUP Phase");
-            await Task.Delay(100);
+            await Task.CompletedTask;
         }
 
         public async Task OnPresentAsync(GameState state)
         {
             GLog.Info($"[DummyGame] PRESENT Phase - 문제: 1 또는 2를 선택하세요!");
-            await Task.Delay(100);
+            await Task.CompletedTask;
         }
 
         public async Task OnInputAsync(GameState state)
         {
             GLog.Info($"[DummyGame] INPUT Phase - 플레이어 선택 대기 중...");
             // INPUT에서는 선택만 받음 (결과 계산 없음)
-            await Task.Delay(100);
+            await Task.CompletedTask;
         }
 
         public async Task OnWaitAsync(GameState state)
         {
             GLog.Info($"[DummyGame] WAIT Phase - 입력 마감");
-            await Task.Delay(100);
+            await Task.CompletedTask;
         }
 
         public async Task OnExecuteAsync(GameState state)
@@ -586,7 +586,7 @@ namespace Galashow.RGF
 
             GLog.Info($"[DummyGame] 결과 - 생존: {_testExample._survivors.Count}명, 탈락: {_testExample._eliminated.Count}명");
 
-            await Task.Delay(100);
+            await Task.CompletedTask;
         }
 
         public async Task OnRevealAsync(GameState state)
@@ -607,13 +607,13 @@ namespace Galashow.RGF
                 GLog.Info($"[DummyGame]   {eliminated} (선택: {choice})");
             }
 
-            await Task.Delay(100);
+            await Task.CompletedTask;
         }
 
         public async Task OnCleanupAsync(GameState state)
         {
             GLog.Info($"[DummyGame] CLEANUP Phase");
-            await Task.Delay(100);
+            await Task.CompletedTask;
         }
 
         public async Task OnPhaseTransitionAsync(GamePhase from, GamePhase to)

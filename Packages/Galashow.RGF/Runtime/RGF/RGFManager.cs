@@ -66,6 +66,7 @@ namespace Galashow.RGF
         {
             base.Awake();
             State.GameRoot = gameObject;
+            _phaseExecutor.SetCoroutineRunner(this);
             GLog.Info("[RGF] RGFManager initialized");
         }
 

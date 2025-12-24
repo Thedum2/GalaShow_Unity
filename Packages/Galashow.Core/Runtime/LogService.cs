@@ -254,7 +254,7 @@ namespace Galashow.Core
         public static void Trace(string msg, string tag = null, UnityEngine.Object ctx = null) =>
             LogService.Instance.Log(LogLevel.Trace, msg, CallerToTag(tag), ctx);
         public static void Debug(string msg, string tag = null, UnityEngine.Object ctx = null) =>
-            LogService.Instance.Log(LogLevel.Debug, msg, CallerToTag(tag), ctx);
+                LogService.Instance.Log(LogLevel.Debug, msg, CallerToTag(tag), ctx);
         public static void Info(string msg, string tag = null, UnityEngine.Object ctx = null) =>
             LogService.Instance.Log(LogLevel.Info, msg, CallerToTag(tag), ctx);
         public static void Warn(string msg, string tag = null, UnityEngine.Object ctx = null) =>
