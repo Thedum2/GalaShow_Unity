@@ -17,5 +17,7 @@ jobs:
         with:
           lfs: true
           persist-credentials: false
+      - name: Materialize downloaded LFS assets
+        run: git lfs checkout
       - name: Validate WebGL settings, package lock and LFS assets
         run: python .github/scripts/validate-project.py
