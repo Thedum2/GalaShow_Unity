@@ -1,0 +1,21 @@
+name: Unity project checks
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  project:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          persist-credentials: false
+      - name: Validate WebGL settings, package lock and LFS assets
+        run: python .github/scripts/validate-project.py

@@ -21,7 +21,7 @@ namespace Galashow.RGF
         {
             if (rgfTestExample == null)
             {
-                rgfTestExample = FindObjectOfType<RGFFlowTestExample>();
+                rgfTestExample = FindFirstObjectByType<RGFFlowTestExample>();
                 if (rgfTestExample == null)
                 {
                     Debug.LogError("[RGFTestButtonHandler] RGFFlowTestExample not found in scene!");

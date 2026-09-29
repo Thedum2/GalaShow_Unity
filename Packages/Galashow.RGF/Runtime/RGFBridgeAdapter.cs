@@ -122,7 +122,7 @@ namespace Galashow.RGF
                 onSuccess?.Invoke(new Acknowledge.U2R.RGFInitialize(true, "1.0.0"));
 
                 // RGFFlowTestExample에 성공 알림
-                var flowTestMonitor = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                var flowTestMonitor = UnityEngine.Object.FindFirstObjectByType<RGFFlowTestExample>();
                 flowTestMonitor?.OnInitializeSuccess();
 
                 GLog.Info("[BRIDGE←] Initialize ACK");
@@ -156,7 +156,7 @@ namespace Galashow.RGF
                         // DummyGamePlugin인 경우 RGFFlowTestExample에 UUID 전달
                         if (pluginRequest.MiniGameName == "DummyGame")
                         {
-                            var flowTestMonitor = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                            var flowTestMonitor = UnityEngine.Object.FindFirstObjectByType<RGFFlowTestExample>();
                             flowTestMonitor?.OnRegisterPluginSuccess();
                             flowTestMonitor?.SetPluginUuid(pluginUuid);
                         }
@@ -212,7 +212,7 @@ namespace Galashow.RGF
                 onSuccess?.Invoke(new Acknowledge.U2R.RGFStartRound(true, data.RoundNumber));
 
                 // RGFFlowTestExample에 성공 알림
-                var flowTestMonitor = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                var flowTestMonitor = UnityEngine.Object.FindFirstObjectByType<RGFFlowTestExample>();
                 flowTestMonitor?.OnStartRoundSuccess();
 
                 GLog.Info("[BRIDGE←] StartRound ACK");
@@ -290,7 +290,7 @@ namespace Galashow.RGF
             {
                 case "DummyGame":
                     // RGFFlowTestExample을 찾아서 DummyGamePlugin 생성
-                    var flowTestMonitor = UnityEngine.Object.FindObjectOfType<RGFFlowTestExample>();
+                    var flowTestMonitor = UnityEngine.Object.FindFirstObjectByType<RGFFlowTestExample>();
                     if (flowTestMonitor != null)
                     {
                         var plugin = new DummyGamePlugin(flowTestMonitor);

@@ -1,26 +1,66 @@
-﻿name: Build Unity WebGL
+name: Build Unity WebGL
 
 on:
   workflow_dispatch:
     inputs:
       commit_message:
-        description: 'Commit message for Unity build update'
+        description: Commit message for Unity build update
         required: true
         default: 'chore: update WebGL build'
         type: string
+      deploy_client:
+        description: Deploy Client with this exact Unity build after publishing
+        required: true
+        default: false
+        type: boolean
+      stage:
+        description: Client deployment environment (when deploy_client is selected)
+        required: true
+        default: dev
+        type: choice
+        options: [dev, prod]
+      client_ref:
+        description: Client branch or tag containing deploy.yml
+        required: true
+        default: develop
+        type: string
+
+permissions:
+  contents: read
+
+# All runs publish to the same artifact branch, regardless of the source ref.
+concurrency:
+  group: unitybuild-develop
+  cancel-in-progress: false
 
 jobs:
   build_and_publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
-      # 1) Unity 프로젝트 체크아웃
+      - name: Check required credentials
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          GALASHOW_TOKEN: ${{ secrets.GALASHOW_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in UNITY_LICENSE UNITY_EMAIL UNITY_PASSWORD GALASHOW_TOKEN; do
+            test -n "${!name}" || { echo "::error::Missing secret: $name"; exit 1; }
+          done
+
       - name: Checkout Unity project
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           lfs: true
+          persist-credentials: false
 
-      # 2) WebGL 빌드 (루트 기준)
+      - name: Validate project and downloaded LFS assets
+        run: python .github/scripts/validate-project.py
+
       - name: Build WebGL
         uses: game-ci/unity-builder@v4
         env:
@@ -30,16 +70,26 @@ jobs:
         with:
           versioning: None
           projectPath: .
-          unityVersion: '2022.3.62f1'
+          unityVersion: auto
           targetPlatform: WebGL
+          buildName: WebGL
 
-      # 3) 디버그: 실제 build 폴더 구조 확인
-      - name: Debug build output
+      - name: Verify React WebGL artifacts
+        shell: bash
         run: |
-          echo ">>> build 디렉토리 구조"
-          ls -R build
+          set -euo pipefail
+          for file in WebGL.loader.js WebGL.data WebGL.framework.js WebGL.wasm; do
+            test -s "build/WebGL/WebGL/Build/$file"
+          done
 
-      # 4) UnityBuild 레포 체크아웃
+      - name: Retain WebGL build
+        uses: actions/upload-artifact@v4
+        with:
+          name: WebGL-${{ github.sha }}
+          path: build/WebGL/WebGL/Build/
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Checkout UnityBuild repo
         uses: actions/checkout@v4
         with:
@@ -47,27 +97,52 @@ jobs:
           token: ${{ secrets.GALASHOW_TOKEN }}
           ref: develop
           path: unitybuild
-          fetch-depth: 0
+          lfs: true
 
-      # 5) 이전 빌드 파일 전부 제거
-      - name: Clear old build files
-        run: rm -rf unitybuild/*
-
-      # 6) WebGL/WebGL/Build 폴더의 파일만 복사
-      - name: Copy WebGL build files into UnityBuild root
+      - name: Replace generated WebGL files
+        shell: bash
         run: |
-          cp build/WebGL/WebGL/Build/* unitybuild/
+          set -euo pipefail
+          # Keep .gitattributes, README and other repository metadata.
+          # Remove old compressed/debug variants as well as the four runtime files.
+          find unitybuild -maxdepth 1 -type f -name 'WebGL.*' -delete
+          cp -a build/WebGL/WebGL/Build/. unitybuild/
+          jq -n --arg source_repository "$GITHUB_REPOSITORY" --arg source_sha "$GITHUB_SHA" \
+            --arg run_url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --arg unity_version "$(sed -n 's/^m_EditorVersion: //p' ProjectSettings/ProjectVersion.txt | tr -d '\r')" \
+            '{source_repository: $source_repository, source_sha: $source_sha, unity_version: $unity_version, run_url: $run_url}' \
+            > unitybuild/build-info.json
 
-      # 7) 커밋 & develop 브랜치에 푸시
-      - name: Commit & push WebGL build
+      - name: Commit and publish WebGL build
+        id: publish
         working-directory: unitybuild
+        env:
+          COMMIT_MESSAGE: ${{ inputs.commit_message }}
+        shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          if git diff-index --quiet HEAD; then
-            echo "No changes to commit"
-          else
-            git commit -m "${{ inputs.commit_message }}"
-            git push origin develop
+          git add --all
+          if ! git diff --cached --quiet; then
+            git commit -m "$COMMIT_MESSAGE"
+            git push origin HEAD:develop
           fi
+          build_sha=$(git rev-parse HEAD)
+          echo "sha=$build_sha" >> "$GITHUB_OUTPUT"
+          printf 'Unity source: `%s`\n\nUnityBuild commit: `%s`\n' "$GITHUB_SHA" "$build_sha" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy Client with the published Unity build
+        if: inputs.deploy_client
+        env:
+          GH_TOKEN: ${{ secrets.GALASHOW_TOKEN }}
+          CLIENT_REF: ${{ inputs.client_ref }}
+          STAGE: ${{ inputs.stage }}
+          UNITY_REF: ${{ steps.publish.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy.yml --repo Thedum2/GalaShow_Client --ref "$CLIENT_REF" \
+            -f stage="$STAGE" -f unity_ref="$UNITY_REF"
+          printf '\nRequested Client deployment: `%s` / `%s` with Unity `%s`. Check the Client Actions run for deployment results.\n' \
+            "$CLIENT_REF" "$STAGE" "$UNITY_REF" >> "$GITHUB_STEP_SUMMARY"

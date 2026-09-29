@@ -34,11 +34,7 @@ namespace Galashow.Core
             {
                 if (instance == null)
                 {
-#if UNITY_6000
-                    instance = FindAnyObjectByType<T>();
-#else
-                    instance = FindObjectOfType<T>();
-#endif
+                    instance = FindFirstObjectByType<T>();
                     if (instance == null)
                     {
                         GameObject obj = new GameObject();
