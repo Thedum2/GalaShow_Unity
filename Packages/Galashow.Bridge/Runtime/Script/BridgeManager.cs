@@ -36,6 +36,21 @@ namespace Galashow.Bridge
             RegisterDefaultHandlers();
             StartCoroutine(CheckTimeouts());
             InitializeBridge();
+            StartCoroutine(NotifyReadyAfterSplash());
+        }
+
+        /// <summary>
+        /// Unity 스플래시가 끝나고 첫 화면을 그린 뒤 React에 BridgeManager_Ready를 알린다.
+        /// React는 이 알림을 받을 때까지 Unity 영역을 로딩 화면으로 가린다 (스플래시가 보이지 않게).
+        /// </summary>
+        private IEnumerator NotifyReadyAfterSplash()
+        {
+            while (!UnityEngine.Rendering.SplashScreen.isFinished)
+            {
+                yield return null;
+            }
+            yield return new WaitForEndOfFrame();
+            SendNotifyInternal("BridgeManager_Ready");
         }
 
         private void InitializeBridge()
