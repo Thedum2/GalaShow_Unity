@@ -53,6 +53,7 @@ namespace Galashow.Trolley
         bool _revealing;
         bool _practice;
         bool _drumroll;
+        bool _hostReady;
         int _lastSecond = -1;
         float _lastVoteSound;
 
@@ -154,6 +155,7 @@ namespace Galashow.Trolley
 
         void SetHostReady(bool ready, bool silent)
         {
+            _hostReady = ready;
             _hud.HostText.text = ready ? "호스트 선택 완료" : "호스트 선택 대기 중...";
             _hud.HostText.color = ready ? new Color(0.5f, 1f, 0.55f) : new Color(0.8f, 0.8f, 0.85f);
             if (ready && !silent)
@@ -305,7 +307,9 @@ namespace Galashow.Trolley
             _hud.SubCenterText.gameObject.SetActive(false);
             _hud.SubCenterText.text = "";
 
-            // 딜레마·선택지는 React 호스트 팝업이 보여 준다. Unity는 입력 현황만 표시하고 카드는 결과 공개 때 쓴다
+            // 시청자가 고를 수 있게 딜레마와 선택지 카드를 보여 준다 (호스트 선택 팝업은 입력 마감 뒤 WAIT에 뜬다)
+            _hud.QuestionPanel.SetActive(true);
+            SetCardsVisible(true);
             _hud.StatusGroup.SetActive(true);
             _audio.Play(Sfx.Whoosh, 0.8f, 1.2f);
             yield return new WaitForSeconds(0.4f);
@@ -323,12 +327,18 @@ namespace Galashow.Trolley
             _audio.Play(Sfx.Slam);
             _audio.Play(Sfx.Horn, 0.8f, 0.9f);
             _hud.StatusGroup.SetActive(false);
+            _hud.QuestionPanel.SetActive(false);
 
             yield return new WaitForSeconds(0.8f);
             HideCenter();
 
-            // 레버 클로즈업 + 드럼롤
+            // 레버 클로즈업. 무한 대기면 호스트가 고를 때까지 조용히 기다린 뒤 드럼롤
             _camera.BlendTo(LeverOrbitShot, 1.1f);
+            if (_state.IsInfinitePhase)
+            {
+                yield return new WaitUntil(() => _hostReady || _revealing);
+                if (_revealing) yield break;
+            }
             _hud.SubCenterText.gameObject.SetActive(true);
             _hud.SubCenterText.color = Color.white;
             _fx.Typewrite("호스트의 선택은...?");

@@ -23,9 +23,11 @@ namespace Galashow.Trolley
         private readonly HashSet<string> _autoAssigned = new HashSet<string>();
 
         /// <summary>
-        /// 무한 대기 WAIT에서 호스트가 고른 뒤에도 마감 연출(드럼롤)을 보여 줄 최소 시간(초)
+        /// 무한 대기 WAIT에서 호스트가 고른 뒤 결과 공개 전까지 드럼롤을 보여 줄 시간(초)
         /// </summary>
         private const double MinimumWaitSeconds = 2.5;
+
+        private readonly System.Diagnostics.Stopwatch _sinceHostChoice = new System.Diagnostics.Stopwatch();
         private readonly System.Random _random = new System.Random();
         private string _hostChoice;
 
@@ -106,27 +108,6 @@ namespace Galashow.Trolley
         protected override Task OnPresent()
         {
             View?.ShowDilemma(Participants.Count);
-
-            // 선택지와 호스트 선택은 React 팝업으로 (입력 마감까지 열어 둔다)
-            var prompt = new HostPrompt
-            {
-                Command = "choice",
-                Title = Data.Title,
-                Description = Data.Description,
-                ActionLabel = "지키기",
-                Hint = "호스트가 지킬 선로를 고르세요. 트롤리는 반대편으로 갑니다. 시청자는 채팅으로 1 또는 2",
-            };
-            for (int i = 0; i < Data.Choices.Count; i++)
-            {
-                prompt.Options.Add(new HostPromptOption
-                {
-                    Id = Data.Choices[i].Id,
-                    Number = i + 1,
-                    Label = Data.Choices[i].Label,
-                    Description = Data.Choices[i].Description,
-                });
-            }
-            ShowHostPrompt(prompt);
             return Task.CompletedTask;
         }
 
@@ -154,13 +135,37 @@ namespace Galashow.Trolley
             View?.SetInputOpen(false);
             AssignMissingVotes();
 
-            // 무한 대기(phase_data WAIT -1): 호스트가 고를 때까지 기다린다. 이미 골랐으면 마감 연출 시간만 보여 준다
+            // 입력 마감 후 호스트 선택 팝업(React)을 연다. 고르면 닫히고, EXECUTE에서도 닫는다
+            OpenHostPrompt();
+
+            // 무한 대기(phase_data WAIT -1): 호스트가 고를 때까지 기다리고, 고른 뒤 드럼롤 시간만큼 더 보여 준다
             if (State.IsInfinitePhase)
             {
-                var elapsed = System.Diagnostics.Stopwatch.StartNew();
-                CompletePhaseWhen(() => _hostChoice != null && elapsed.Elapsed.TotalSeconds >= MinimumWaitSeconds);
+                CompletePhaseWhen(() => _hostChoice != null && _sinceHostChoice.Elapsed.TotalSeconds >= MinimumWaitSeconds);
             }
             return Task.CompletedTask;
+        }
+
+        private void OpenHostPrompt()
+        {
+            var prompt = new HostPrompt
+            {
+                Command = "choice",
+                Title = Data.Title,
+                Description = Data.Description,
+                ActionLabel = "지키기",
+            };
+            for (int i = 0; i < Data.Choices.Count; i++)
+            {
+                prompt.Options.Add(new HostPromptOption
+                {
+                    Id = Data.Choices[i].Id,
+                    Number = i + 1,
+                    Label = Data.Choices[i].Label,
+                    Description = Data.Choices[i].Description,
+                });
+            }
+            ShowHostPrompt(prompt);
         }
 
         /// <summary>
@@ -213,6 +218,7 @@ namespace Galashow.Trolley
             }
 
             _hostChoice = choice;
+            _sinceHostChoice.Restart();
             View?.SetHostReady(true);
             GLog.Debug("[Trolley] Host choice received");
             return true;
