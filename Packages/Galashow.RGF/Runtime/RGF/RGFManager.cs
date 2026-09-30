@@ -137,19 +137,20 @@ namespace Galashow.RGF
         /// <param name="pluginUuid">플러그인 UUID</param>
         /// <param name="roundNumber">라운드 번호</param>
         /// <param name="gameData">게임 데이터</param>
-        public async Task StartRoundAsync(string pluginUuid, int roundNumber, object gameData = null)
+        /// <returns>8단계를 정상 완료했으면 true. 중단·오류·시작 거부는 false</returns>
+        public async Task<bool> StartRoundAsync(string pluginUuid, int roundNumber, object gameData = null, bool practice = false)
         {
             if (IsRunning)
             {
                 GLog.Warn("[RGF] Round already running");
-                return;
+                return false;
             }
 
             var plugin = _pluginRegistry.Get(pluginUuid);
             if (plugin == null)
             {
                 GLog.Error($"[RGF✗] Plugin not found: {pluginUuid}");
-                return;
+                return false;
             }
 
             IsRunning = true;
@@ -157,19 +158,23 @@ namespace Galashow.RGF
             CurrentPluginUuid = pluginUuid;
             State.CurrentRound = roundNumber;
             State.GameData = gameData;
+            State.IsPractice = practice;
 
             GLog.Info($"[RGF] Round {roundNumber} Start - {plugin.GameName}");
 
             try
             {
                 // 8단계 생명주기 실행
-                await _phaseExecutor.ExecuteFullRoundAsync(plugin, State);
+                bool completed = await _phaseExecutor.ExecuteFullRoundAsync(plugin, State);
 
-                GLog.Info($"[RGF] Round {roundNumber} Complete");
+                GLog.Info(completed ? $"[RGF] Round {roundNumber} Complete" : $"[RGF] Round {roundNumber} Aborted");
+                return completed;
             }
             catch (Exception ex)
             {
                 GLog.Error($"[RGF✗] Round error: {ex.Message}");
+                NotifyAborted(plugin);
+                return false;
             }
             finally
             {
@@ -194,11 +199,39 @@ namespace Galashow.RGF
         }
 
         /// <summary>
+        /// 참가자 입력 전달. 실행 중인 플러그인이 IPlayerInputReceiver일 때만 전달한다.
+        /// </summary>
+        public void SubmitInput(PlayerInput input)
+        {
+            if (!IsRunning || !(_currentPlugin is IPlayerInputReceiver receiver))
+            {
+                return;
+            }
+
+            receiver.ReceiveInput(input);
+        }
+
+        /// <summary>
+        /// 호스트 입력 전달. 실행 중인 플러그인이 IHostInputReceiver일 때만 전달한다.
+        /// </summary>
+        public bool SubmitHostInput(HostInput input)
+        {
+            if (!IsRunning || !(_currentPlugin is IHostInputReceiver receiver))
+            {
+                return false;
+            }
+
+            return receiver.ReceiveHostInput(input);
+        }
+
+        /// <summary>
         /// 라운드 강제 중단
+        /// 플러그인 정리(IRoundAbortHandler) 후 남은 Phase를 건너뛴다.
+        /// 진행 중인 Phase 작업이 끝나면 StartRoundAsync가 false로 반환된다.
         /// </summary>
         public void AbortRound()
         {
-            if (!IsRunning)
+            if (!IsRunning || _phaseExecutor.IsAborted)
             {
                 return;
             }
@@ -206,9 +239,24 @@ namespace Galashow.RGF
             GLog.Warn("[RGF] Round aborted");
 
             _phaseExecutor.Abort(State);
+            NotifyAborted(_currentPlugin);
+        }
 
-            IsRunning = false;
-            _currentPlugin = null;
+        private void NotifyAborted(IGamePlugin plugin)
+        {
+            if (!(plugin is IRoundAbortHandler handler))
+            {
+                return;
+            }
+
+            try
+            {
+                handler.OnRoundAborted(State);
+            }
+            catch (Exception ex)
+            {
+                GLog.Error($"[RGF✗] Abort handler error: {ex.Message}");
+            }
         }
 
         #endregion

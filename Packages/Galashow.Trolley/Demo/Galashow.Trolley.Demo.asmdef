@@ -1,0 +1,19 @@
+{
+    "name": "Galashow.Trolley.Demo",
+    "rootNamespace": "Galashow.Trolley.Demo",
+    "references": [
+        "GUID:a7d46dd5b7e984d47b857fd2c78ae0b4",
+        "GUID:e435a9eb6710d334c97375b1c1d6cc5d",
+        "GUID:f8c3d2a1e9b7c4f4d8e6a5b3c2d1f0e9",
+        "GUID:897e67a60c69b9d47848cf783d2ff9f5"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

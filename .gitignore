@@ -101,3 +101,6 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# 에디터 캡처 도구 출력 (Tools/GalaShow/Capture Quirky Side Views)
+/Screenshots/

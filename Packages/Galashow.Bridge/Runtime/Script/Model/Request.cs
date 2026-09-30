@@ -31,12 +31,24 @@ namespace Galashow.Bridge.Model
 
                 [JsonProperty("playerName")]
                 public string PlayerName { get; set; }
+
+                /// <summary>
+                /// 참가자 캐릭터. Admin viewer_avatars.name (선택)
+                /// </summary>
+                [JsonProperty("avatarName")]
+                public string AvatarName { get; set; }
             }
 
             public class Config
             {
                 [JsonProperty("enableDebugLog")]
                 public bool EnableDebugLog { get; set; }
+
+                /// <summary>
+                /// 로비에서 고른 시청자 아바타 이름 목록 (선택). avatarName이 없는 참가자에게 순서대로 나눠 준다.
+                /// </summary>
+                [JsonProperty("avatarNames")]
+                public System.Collections.Generic.List<string> AvatarNames { get; set; }
             }
 
             //R2U_RGFManager_RegisterPlugin_REQ
@@ -59,37 +71,43 @@ namespace Galashow.Bridge.Model
                 public int RoundNumber { get; set; }
 
                 [JsonProperty("gameData")]
-                public Newtonsoft.Json.Linq.JArray GameData { get; set; }
+                public Newtonsoft.Json.Linq.JToken GameData { get; set; }
 
                 [JsonProperty("phaseDuration")]
                 public PhaseDuration PhaseDuration { get; set; }
+
+                /// <summary>
+                /// 연습 라운드 (Tutorial). 판정·연출은 같지만 참가자 생존 상태를 바꾸지 않는다.
+                /// </summary>
+                [JsonProperty("practice")]
+                public bool Practice { get; set; }
             }
 
             public class PhaseDuration
             {
                 [JsonProperty("READY")]
-                public int Ready { get; set; }
+                public float Ready { get; set; }
 
                 [JsonProperty("SETUP")]
-                public int Setup { get; set; }
+                public float Setup { get; set; }
 
                 [JsonProperty("PRESENT")]
-                public int Present { get; set; }
+                public float Present { get; set; }
 
                 [JsonProperty("INPUT")]
-                public int Input { get; set; }
+                public float Input { get; set; }
 
                 [JsonProperty("WAIT")]
-                public int Wait { get; set; }
+                public float Wait { get; set; }
 
                 [JsonProperty("EXECUTE")]
-                public int Execute { get; set; }
+                public float Execute { get; set; }
 
                 [JsonProperty("REVEAL")]
-                public int Reveal { get; set; }
+                public float Reveal { get; set; }
 
                 [JsonProperty("CLEANUP")]
-                public int Cleanup { get; set; }
+                public float Cleanup { get; set; }
             }
 
             //R2U_RGFManager_AbortRound_REQ

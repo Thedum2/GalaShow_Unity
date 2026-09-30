@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Galashow.Core;
 using Galashow.Bridge;
 using Galashow.Bridge.Model;
+using Newtonsoft.Json.Linq;
 
 namespace Galashow.RGF
 {
@@ -16,6 +17,21 @@ namespace Galashow.RGF
     {
         private RGFHandler _handler;
         private bool _isInitialized = false;
+
+        /// <summary>
+        /// Initialize 처리 성공
+        /// </summary>
+        public event Action Initialized;
+
+        /// <summary>
+        /// 플러그인 등록 성공 (miniGameName, UUID)
+        /// </summary>
+        public event Action<string, string> PluginRegistered;
+
+        /// <summary>
+        /// StartRound 수락 (라운드 번호)
+        /// </summary>
+        public event Action<int> RoundStartAccepted;
 
         protected override void Awake()
         {
@@ -36,6 +52,8 @@ namespace Galashow.RGF
 
         private void OnDestroy()
         {
+            HostPromptBus.Opened -= OnHostPromptOpened;
+            HostPromptBus.Closed -= OnHostPromptClosed;
             if (_handler != null)
             {
                 _handler.RemovePort(this);
@@ -57,6 +75,36 @@ namespace Galashow.RGF
 
             // GameState의 Phase 변경 이벤트
             rgfManager.State.OnPhaseChanged += OnPhaseChanged;
+
+            // 호스트 선택 팝업 (게임 공통)
+            HostPromptBus.Opened += OnHostPromptOpened;
+            HostPromptBus.Closed += OnHostPromptClosed;
+        }
+
+        private void OnHostPromptOpened(HostPrompt prompt)
+        {
+            _handler.PromptOpened(new Notify.U2R.RGFPromptOpened
+            {
+                RoundNumber = RGFManager.Instance.State.CurrentRound,
+                PromptId = prompt.PromptId,
+                Command = prompt.Command,
+                Title = prompt.Title,
+                Description = prompt.Description,
+                ActionLabel = prompt.ActionLabel,
+                Hint = prompt.Hint,
+                Options = prompt.Options.Select(o => new Notify.U2R.PromptOption
+                {
+                    Id = o.Id,
+                    Number = o.Number,
+                    Label = o.Label,
+                    Description = o.Description
+                }).ToList()
+            });
+        }
+
+        private void OnHostPromptClosed(string promptId)
+        {
+            _handler.PromptClosed(RGFManager.Instance.State.CurrentRound, promptId);
         }
 
         private void OnPhaseStarted(GamePhase phase)
@@ -99,11 +147,21 @@ namespace Galashow.RGF
                 // 플레이어 정보 등록
                 if (data.PlayerInfo != null)
                 {
+                    // avatarName이 없는 참가자는 로비에서 고른 아바타(config.avatarNames)를 순서대로 받는다
+                    var pool = data.Config?.AvatarNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+                    int next = 0;
                     foreach (var player in data.PlayerInfo)
                     {
+                        var avatar = player.AvatarName;
+                        if (string.IsNullOrWhiteSpace(avatar) && pool != null && pool.Count > 0)
+                        {
+                            avatar = pool[next++ % pool.Count];
+                        }
+
                         RGFManager.Instance.State.AddPlayer(
                             player.PlayerIdx.ToString(),
-                            player.PlayerName
+                            player.PlayerName,
+                            avatar
                         );
                     }
                 }
@@ -121,9 +179,7 @@ namespace Galashow.RGF
                 _isInitialized = true;
                 onSuccess?.Invoke(new Acknowledge.U2R.RGFInitialize(true, "1.0.0"));
 
-                // RGFFlowTestExample에 성공 알림
-                var flowTestMonitor = UnityEngine.Object.FindFirstObjectByType<RGFFlowTestExample>();
-                flowTestMonitor?.OnInitializeSuccess();
+                Initialized?.Invoke();
 
                 GLog.Info("[BRIDGE←] Initialize ACK");
             }
@@ -153,13 +209,7 @@ namespace Galashow.RGF
                     {
                         string pluginUuid = RGFManager.Instance.RegisterPlugin(plugin);
 
-                        // DummyGamePlugin인 경우 RGFFlowTestExample에 UUID 전달
-                        if (pluginRequest.MiniGameName == "DummyGame")
-                        {
-                            var flowTestMonitor = UnityEngine.Object.FindFirstObjectByType<RGFFlowTestExample>();
-                            flowTestMonitor?.OnRegisterPluginSuccess();
-                            flowTestMonitor?.SetPluginUuid(pluginUuid);
-                        }
+                        PluginRegistered?.Invoke(pluginRequest.MiniGameName, pluginUuid);
 
                         results.Add(new Acknowledge.U2R.RGFRegisterPlugin(
                             pluginRequest.MiniGameIdx,
@@ -195,6 +245,14 @@ namespace Galashow.RGF
             {
                 var rgfManager = RGFManager.Instance;
 
+                // 게임 데이터 변환·검증 (실패 시 ACK 전에 거부)
+                bool hasGameData = data.GameData != null && data.GameData.Type != JTokenType.Null;
+                object gameData = hasGameData ? data.GameData : null;
+                if (rgfManager.GetPlugin(data.MiniGamePluginIdx) is IGameDataParser parser && hasGameData)
+                {
+                    gameData = parser.ParseGameData(data.GameData);
+                }
+
                 // Phase Duration 설정
                 if (data.PhaseDuration != null)
                 {
@@ -211,9 +269,7 @@ namespace Galashow.RGF
                 // ACK 응답
                 onSuccess?.Invoke(new Acknowledge.U2R.RGFStartRound(true, data.RoundNumber));
 
-                // RGFFlowTestExample에 성공 알림
-                var flowTestMonitor = UnityEngine.Object.FindFirstObjectByType<RGFFlowTestExample>();
-                flowTestMonitor?.OnStartRoundSuccess();
+                RoundStartAccepted?.Invoke(data.RoundNumber);
 
                 GLog.Info("[BRIDGE←] StartRound ACK");
 
@@ -231,14 +287,18 @@ namespace Galashow.RGF
                 }
 
                 // 라운드 실행 (비동기)
-                await rgfManager.StartRoundAsync(
+                bool completed = await rgfManager.StartRoundAsync(
                     data.MiniGamePluginIdx,
                     data.RoundNumber,
-                    data.GameData
+                    gameData,
+                    data.Practice
                 );
 
                 // 라운드 완료 알림
-                SendRoundCompletedNotify(data.RoundNumber, data.MiniGamePluginIdx);
+                if (completed)
+                {
+                    SendRoundCompletedNotify(data.RoundNumber, data.MiniGamePluginIdx, data.Practice);
+                }
             }
             catch (Exception ex)
             {
@@ -269,11 +329,43 @@ namespace Galashow.RGF
 
         public void R2U_RGFManager_ChatInput_NTY(Notify.R2U.RGFChatInput data)
         {
-            // 채팅 입력 처리 (현재는 로그만)
-            if (data.ChatInfo != null)
+            if (data?.ChatInfo == null)
             {
-                GLog.Debug($"[BRIDGE→] Chat - {data.ChatInfo.Count} messages");
+                return;
             }
+
+            var rgfManager = RGFManager.Instance;
+            if (!rgfManager.IsRunning || data.RoundNumber != rgfManager.State.CurrentRound)
+            {
+                GLog.Debug($"[BRIDGE→] Chat ignored - round {data.RoundNumber} not running");
+                return;
+            }
+
+            GLog.Debug($"[BRIDGE→] Chat - {data.ChatInfo.Count} messages");
+
+            // 입력 단계·생존 여부 확인은 플러그인(GamePluginBase)이 한다
+            foreach (var chat in data.ChatInfo)
+            {
+                rgfManager.SubmitInput(new PlayerInput(chat.PlayerIdx.ToString(), chat.Message, data.InputEventTime));
+            }
+        }
+
+        public void R2U_RGFManager_HostInput_NTY(Notify.R2U.RGFHostInput data)
+        {
+            if (data == null)
+            {
+                return;
+            }
+
+            var rgfManager = RGFManager.Instance;
+            if (!rgfManager.IsRunning || data.RoundNumber != rgfManager.State.CurrentRound)
+            {
+                GLog.Debug($"[BRIDGE→] HostInput ignored - round {data.RoundNumber} not running");
+                return;
+            }
+
+            bool accepted = rgfManager.SubmitHostInput(new HostInput(data.Command, data.Value));
+            GLog.Info($"[BRIDGE→] HostInput {data.Command} {(accepted ? "accepted" : "rejected")}");
         }
 
         #endregion
@@ -282,34 +374,38 @@ namespace Galashow.RGF
 
         private IGamePlugin CreatePluginByName(string gameName)
         {
-            // 플러그인 팩토리 패턴
-            // 실제로는 리플렉션이나 플러그인 레지스트리를 통해 동적으로 생성해야 함
-
-            // 여기서는 더미 데이터를 위한 간단한 구현
-            switch (gameName)
+            // 미니게임 패키지는 GamePluginCatalog에 자신을 등록한다 (miniGameName = 플러그인 ID)
+            if (GamePluginCatalog.TryCreate(gameName, out var plugin))
             {
-                case "DummyGame":
-                    // RGFFlowTestExample을 찾아서 DummyGamePlugin 생성
-                    var flowTestMonitor = UnityEngine.Object.FindFirstObjectByType<RGFFlowTestExample>();
-                    if (flowTestMonitor != null)
-                    {
-                        var plugin = new DummyGamePlugin(flowTestMonitor);
-                        GLog.Info($"[BRIDGE] DummyGamePlugin created for RGFFlowTestExample");
-                        return plugin;
-                    }
-                    else
-                    {
-                        GLog.Warn($"[BRIDGE⚠] RGFFlowTestExample not found in scene");
-                        return null;
-                    }
+                return plugin;
+            }
 
-                default:
-                    GLog.Warn($"[BRIDGE⚠] Unknown game plugin: {gameName}");
-                    return null;
+            GLog.Warn($"[BRIDGE⚠] Unknown game plugin: {gameName}");
+            return null;
+        }
+
+        private static readonly Newtonsoft.Json.JsonSerializer CamelCase = Newtonsoft.Json.JsonSerializer.Create(
+            new Newtonsoft.Json.JsonSerializerSettings
+            {
+                ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
+                ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore
+            });
+
+        private static JToken ToCamelCaseJson(object value)
+        {
+            if (value == null) return null;
+            try
+            {
+                return JToken.FromObject(value, CamelCase);
+            }
+            catch (Exception ex)
+            {
+                GLog.Warn($"[BRIDGE⚠] Result detail not serializable: {ex.Message}");
+                return null;
             }
         }
 
-        private void SendRoundCompletedNotify(int roundNumber, string pluginIdx)
+        private void SendRoundCompletedNotify(int roundNumber, string pluginIdx, bool practice)
         {
             var rgfManager = RGFManager.Instance;
             var plugin = rgfManager.GetPlugin(pluginIdx);
@@ -331,10 +427,11 @@ namespace Galashow.RGF
                 EliminatedUserIdx = eliminatedPlayers.Select(p => int.Parse(p.Id)).ToList(),
                 TotalParticipants = state.Players.Count,
                 RemainingPlayers = alivePlayers.Count,
-                TotalPlayTime = UnityEngine.Time.time - state.PhaseStartTime
+                TotalPlayTime = UnityEngine.Time.time - state.PhaseStartTime,
+                Detail = ToCamelCaseJson(state.ResultData)
             };
 
-            _handler.RoundCompleted(roundNumber, pluginIdx, plugin.GameName, result);
+            _handler.RoundCompleted(roundNumber, pluginIdx, plugin.GameName, result, practice);
 
             GLog.Info($"[BRIDGE←] RoundCompleted NTY - Survivors: {alivePlayers.Count}/{state.Players.Count}");
         }

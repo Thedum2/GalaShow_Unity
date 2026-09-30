@@ -25,6 +25,21 @@ namespace Galashow.Bridge.Model
                 public List<ChatInfo> ChatInfo { get; set; }
             }
 
+            /// <summary>
+            /// 호스트(스트리머) 입력. 게임별 명령 (예: 트롤리 command="choice", value="A")
+            /// </summary>
+            public class RGFHostInput
+            {
+                [JsonProperty("roundNumber")]
+                public int RoundNumber { get; set; }
+
+                [JsonProperty("command")]
+                public string Command { get; set; }
+
+                [JsonProperty("value")]
+                public string Value { get; set; }
+            }
+
             public class ChatInfo
             {
                 [JsonProperty("playerIdx")]
@@ -143,6 +158,12 @@ namespace Galashow.Bridge.Model
                 [JsonProperty("result")]
                 public RoundResult Result { get; set; }
 
+                /// <summary>
+                /// 연습 라운드였는지 (StartRound practice)
+                /// </summary>
+                [JsonProperty("practice")]
+                public bool Practice { get; set; }
+
                 public RGFRoundCompleted(int roundNumber, string miniGamePluginIdx, string gameName, RoundResult result)
                 {
                     RoundNumber = roundNumber;
@@ -150,6 +171,63 @@ namespace Galashow.Bridge.Model
                     GameName = gameName;
                     Result = result;
                 }
+            }
+
+            /// <summary>
+            /// 호스트 선택 팝업 열기 (게임 공통). 고른 값은 RGFManager_HostInput(command, value=options[].id)
+            /// </summary>
+            public class RGFPromptOpened
+            {
+                [JsonProperty("roundNumber")]
+                public int RoundNumber { get; set; }
+
+                [JsonProperty("promptId")]
+                public string PromptId { get; set; }
+
+                [JsonProperty("command")]
+                public string Command { get; set; }
+
+                [JsonProperty("title")]
+                public string Title { get; set; }
+
+                [JsonProperty("description")]
+                public string Description { get; set; }
+
+                [JsonProperty("actionLabel")]
+                public string ActionLabel { get; set; }
+
+                [JsonProperty("hint")]
+                public string Hint { get; set; }
+
+                [JsonProperty("options")]
+                public List<PromptOption> Options { get; set; } = new List<PromptOption>();
+            }
+
+            public class PromptOption
+            {
+                [JsonProperty("id")]
+                public string Id { get; set; }
+
+                [JsonProperty("number")]
+                public int Number { get; set; }
+
+                [JsonProperty("label")]
+                public string Label { get; set; }
+
+                [JsonProperty("description")]
+                public string Description { get; set; }
+            }
+
+            /// <summary>
+            /// 호스트 선택 팝업 닫기 (선택 확정·라운드 종료)
+            /// </summary>
+            public class RGFPromptClosed
+            {
+                [JsonProperty("roundNumber")]
+                public int RoundNumber { get; set; }
+
+                [JsonProperty("promptId")]
+                public string PromptId { get; set; }
             }
 
             public class RoundResult
@@ -168,6 +246,12 @@ namespace Galashow.Bridge.Model
 
                 [JsonProperty("totalPlayTime")]
                 public float TotalPlayTime { get; set; }
+
+                /// <summary>
+                /// 게임별 결과 상세 (GameState.ResultData). 트롤리: hostChoice, distribution, results[] 등
+                /// </summary>
+                [JsonProperty("detail")]
+                public object Detail { get; set; }
             }
         }
         

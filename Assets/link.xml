@@ -1,0 +1,42 @@
+<linker>
+    <!--
+        IL2CPP(WebGL) 코드 스트리핑 보존 목록. 패키지 안의 link.xml은 빌드에 전달되지 않으므로 여기서 관리한다.
+        Galashow 어셈블리: React 메시지·게임 데이터 모델은 JSON 변환(리플렉션)으로만 생성·읽기 때문에 통째로 보존한다.
+        미니게임 패키지를 만들면(Galashow → 미니게임 패키지 만들기) 아래에 어셈블리가 자동으로 추가된다.
+    -->
+    <assembly fullname="Galashow.Core" preserve="all"/>
+    <assembly fullname="Galashow.Bridge" preserve="all"/>
+    <assembly fullname="Galashow.RGF" preserve="all"/>
+    <assembly fullname="Galashow.RGF.Testing" preserve="all"/>
+    <assembly fullname="Galashow.Common" preserve="all"/>
+    <assembly fullname="Galashow.Trolley" preserve="all"/>
+
+    <!-- com.unity.nuget.newtonsoft-json 패키지의 link.xml 내용 (패키지 쪽은 적용되지 않음) -->
+    <assembly fullname="System">
+    <type fullname="System.ComponentModel.TypeConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.ArrayConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.BaseNumberConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.BooleanConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.ByteConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.CharConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.CollectionConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.ComponentConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.CultureInfoConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.DateTimeConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.DecimalConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.DoubleConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.EnumConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.ExpandableObjectConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.Int16Converter" preserve="all"/>
+    <type fullname="System.ComponentModel.Int32Converter" preserve="all"/>
+    <type fullname="System.ComponentModel.Int64Converter" preserve="all"/>
+    <type fullname="System.ComponentModel.NullableConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.SByteConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.SingleConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.StringConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.TimeSpanConverter" preserve="all"/>
+    <type fullname="System.ComponentModel.UInt16Converter" preserve="all"/>
+    <type fullname="System.ComponentModel.UInt32Converter" preserve="all"/>
+    <type fullname="System.ComponentModel.UInt64Converter" preserve="all"/>
+    </assembly>
+</linker>

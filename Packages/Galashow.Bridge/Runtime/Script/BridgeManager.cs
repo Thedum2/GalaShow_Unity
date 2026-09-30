@@ -133,13 +133,18 @@ namespace Galashow.Bridge
                 handler.HandleRequest(
                     message,
                     onSuccess: (data) => SendAcknowledge(message.id, message.route, true, data),
-                    onError: (error) => SendAcknowledge(message.id, message.route, false, null)
+                    onError: (error) =>
+                    {
+                        // 실패 사유를 ACK에 담아 React가 원인을 알 수 있게 한다
+                        GLog.Error($"[Bridge✗] {message.route} failed: {error}");
+                        SendAcknowledge(message.id, message.route, false, new { message = error });
+                    }
                 );
             }
             else
             {
                 GLog.Warn($"[Bridge⚠] No handler for route: {message.route}");
-                SendAcknowledge(message.id, message.route, false, null);
+                SendAcknowledge(message.id, message.route, false, new { message = $"No handler for route: {message.route}" });
             }
         }
         private void HandleAcknowledge(string route, Message message)

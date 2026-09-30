@@ -38,6 +38,7 @@
       "depth": 0,
       "source": "embedded",
       "dependencies": {
+        "com.galashow.core": "0.1.0",
         "com.galashow.rgf": "0.1.0",
         "com.galashow.common": "0.1.0"
       }

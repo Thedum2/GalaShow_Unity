@@ -9,291 +9,279 @@ using Galashow.RGF;
 namespace Galashow.Trolley
 {
     /// <summary>
-    /// 트롤리 딜레마 게임 플러그인
-    /// RGF의 8단계 생명주기를 구현하여 트롤리 딜레마 게임 로직을 처리
+    /// 트롤리 딜레마: 한 판으로 끝나는 미니게임 (docs/minigame-trolley.md)
+    /// 참가자는 호스트가 지킬 선택지의 선로에 눕고, 트롤리는 호스트가 고른 반대편 선로로 간다 → 호스트와 같은 선택만 생존
+    /// - 시청자: INPUT 단계에 채팅 1 또는 2, 마지막 입력 유지
+    /// - 호스트: PRESENT~WAIT 동안 React 호스트 팝업(RGFManager_PromptOpened → RGFManager_HostInput)으로 SubmitHostChoice. 방송 화면에는 REVEAL 전까지 선택 여부만 표시
+    /// - EXECUTE 시작 시 호스트 선택 확정, 없으면 rule.hostChoiceIfMissing
     /// </summary>
-    public class TrolleyDilemmaPlugin : IGamePlugin
+    public class TrolleyDilemmaPlugin : GamePluginBase<TrolleyGameData>
     {
-        public string GameName => "트롤리 딜레마";
+        public override string GameName => "트롤리 딜레마";
 
-        private TrolleyGameData _gameData;
-        private Dictionary<string, DateTime> _playerSelectionTimes = new Dictionary<string, DateTime>();
+        private readonly Dictionary<string, string> _votes = new Dictionary<string, string>();
+        private readonly HashSet<string> _autoAssigned = new HashSet<string>();
 
         /// <summary>
-        /// READY Phase: 게임 준비
+        /// 무한 대기 WAIT에서 호스트가 고른 뒤에도 마감 연출(드럼롤)을 보여 줄 최소 시간(초)
         /// </summary>
-        public async Task OnReadyAsync(GameState state)
+        private const double MinimumWaitSeconds = 2.5;
+        private readonly System.Random _random = new System.Random();
+        private string _hostChoice;
+
+        /// <summary>
+        /// 이번 라운드 시청자 입력 (참가자 ID → 선택지 ID)
+        /// </summary>
+        public IReadOnlyDictionary<string, string> Votes => _votes;
+
+        /// <summary>
+        /// 호스트 선택 입력 여부 (선택 내용은 공개 전까지 화면에 쓰지 않는다)
+        /// </summary>
+        public bool HasHostChoice => _hostChoice != null;
+
+        protected override void ValidateGameData(TrolleyGameData data)
         {
-            // 게임 데이터 초기화
-            _gameData = state.GameData as TrolleyGameData;
-            if (_gameData == null)
+            if (data.Choices == null || data.Choices.Count != 2)
             {
-                GLog.Error("[Trolley✗] Invalid game data");
-                return;
+                throw new FormatException("Trolley gameData requires exactly 2 choices");
             }
 
-            // Phase Duration 설정
-            state.SetPhaseDurations(new Dictionary<GamePhase, float>
+            if (data.Choices.Any(c => string.IsNullOrWhiteSpace(c.Id)) ||
+                data.Choices.Select(c => c.Id.ToUpperInvariant()).Distinct().Count() != data.Choices.Count)
             {
-                { GamePhase.READY, 3f },
-                { GamePhase.SETUP, 1f },
-                { GamePhase.PRESENT, 5f },
-                { GamePhase.INPUT, _gameData.InputTimeLimit },
-                { GamePhase.WAIT, 2f },
-                { GamePhase.EXECUTE, 3f },
-                { GamePhase.REVEAL, 10f },
-                { GamePhase.CLEANUP, 2f }
-            });
+                throw new FormatException("Trolley choices need unique ids");
+            }
 
-            // 결과 객체 초기화
-            var result = new TrolleyGameResult
+            var rule = data.Rule ?? (data.Rule = new TrolleyRule());
+            if (rule.HostChoiceIfMissing != TrolleyRule.Random && rule.HostChoiceIfMissing != TrolleyRule.Abort)
             {
-                RoundNumber = state.CurrentRound,
-                StartTime = UnityEngine.Time.time
+                throw new FormatException($"Unknown rule.hostChoiceIfMissing: {rule.HostChoiceIfMissing}");
+            }
+        }
+
+        protected override GameObject CreateStageObject(GameState state)
+        {
+            // 월드 좌표로 배치하므로 씬 루트에 둔다 (CLEANUP·중단 시 기본 클래스가 제거)
+            var go = new GameObject("TrolleyStage");
+            go.AddComponent<TrolleyStage>();
+            return go;
+        }
+
+        private TrolleyStage View => GetStage<TrolleyStage>();
+
+        protected override Task OnReady()
+        {
+            if (Data == null)
+            {
+                throw new InvalidOperationException("[Trolley✗] gameData is required");
+            }
+
+            if (Data.InputTimeLimitMs > 0)
+            {
+                State.SetPhaseDuration(GamePhase.INPUT, Data.InputTimeLimitMs / 1000f);
+            }
+
+            _votes.Clear();
+            _autoAssigned.Clear();
+            _hostChoice = null;
+            State.ResultData = null;
+
+            GLog.Info($"[Trolley] Ready - Round {State.CurrentRound}: {Data.Title} ({Participants.Count}명)");
+            return Task.CompletedTask;
+        }
+
+        protected override Task OnSetup()
+        {
+            if (View != null)
+            {
+                var participants = Participants
+                    .Select(id => State.Players.TryGetValue(id, out var p) ? new TrolleyParticipant(id, p.Name, p.AvatarName) : new TrolleyParticipant(id, id, null))
+                    .ToList();
+                View.Build(Data, participants, IsPractice);
+                View.HostKeyPressed += OnHostKey;
+            }
+            return Task.CompletedTask;
+        }
+
+        protected override Task OnPresent()
+        {
+            View?.ShowDilemma(Participants.Count);
+
+            // 선택지와 호스트 선택은 React 팝업으로 (입력 마감까지 열어 둔다)
+            var prompt = new HostPrompt
+            {
+                Command = "choice",
+                Title = Data.Title,
+                Description = Data.Description,
+                ActionLabel = "지키기",
+                Hint = "호스트가 지킬 선로를 고르세요. 트롤리는 반대편으로 갑니다. 시청자는 채팅으로 1 또는 2",
             };
-            state.ResultData = result;
-
-            _playerSelectionTimes.Clear();
-            GLog.Info($"[Trolley] Ready - Round {state.CurrentRound}: {_gameData.Title}");
-
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// SETUP Phase: 게임 데이터 구축
-        /// </summary>
-        public async Task OnSetupAsync(GameState state)
-        {
-            // 서비스 생성 및 등록
-            var uiService = new TrolleyUIService();
-            var timerService = new TrolleyTimerService();
-            var scoreService = new TrolleyScoreService();
-
-            state.RegisterService(uiService);
-            state.RegisterService(timerService);
-            state.RegisterService(scoreService);
-
-            // 서비스 초기화
-            uiService.Initialize(_gameData);
-            scoreService.Initialize(state);
-
-            GLog.Info("[Trolley] Services initialized");
-
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// PRESENT Phase: 문제 제시
-        /// </summary>
-        public async Task OnPresentAsync(GameState state)
-        {
-            var uiService = state.GetService<TrolleyUIService>();
-            uiService?.ShowProblem();
-            uiService?.ShowChoices();
-
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// INPUT Phase: 플레이어 입력 수집
-        /// </summary>
-        public async Task OnInputAsync(GameState state)
-        {
-            var timerService = state.GetService<TrolleyTimerService>();
-            var uiService = state.GetService<TrolleyUIService>();
-
-            timerService?.StartTimer(state.PhaseDuration);
-
-            if (timerService != null)
+            for (int i = 0; i < Data.Choices.Count; i++)
             {
-                timerService.OnTimerWarning += (remaining) =>
+                prompt.Options.Add(new HostPromptOption
                 {
-                    uiService?.ShowMessage($"⚠️ 남은 시간: {remaining:F0}초!");
-                };
-
-                timerService.OnTimerExpired += () =>
-                {
-                    uiService?.ShowMessage("⏰ 시간 종료!");
-                };
+                    Id = Data.Choices[i].Id,
+                    Number = i + 1,
+                    Label = Data.Choices[i].Label,
+                    Description = Data.Choices[i].Description,
+                });
             }
-
-            uiService?.ShowMessage("선택을 시작하세요!");
-
-            await Task.CompletedTask;
+            ShowHostPrompt(prompt);
+            return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// WAIT Phase: 입력 마감
-        /// </summary>
-        public async Task OnWaitAsync(GameState state)
+        protected override Task OnInput()
         {
-            await Task.CompletedTask;
+            View?.SetInputOpen(true);
+            return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// EXECUTE Phase: 결과 계산
-        /// </summary>
-        public async Task OnExecuteAsync(GameState state)
+        protected override void OnPlayerInput(PlayerInput input)
         {
-            var totalPlayers = _gameData.Choices.Sum(c => c.SelectedPlayers.Count);
-
-            var gameResult = state.ResultData as TrolleyGameResult;
-            if (gameResult == null)
-            {
-                GLog.Error("[Trolley✗] GameResult not found");
-                return;
-            }
-
-            var scoreService = state.GetService<TrolleyScoreService>();
-
-            // 각 선택지별 생존/탈락 결정
-            foreach (var choice in _gameData.Choices)
-            {
-                var choiceStat = new ChoiceStatistics
-                {
-                    SelectionCount = choice.SelectedPlayers.Count,
-                    SelectionRate = totalPlayers > 0 ? (float)choice.SelectedPlayers.Count / totalPlayers : 0
-                };
-
-                var survivorCount = (int)(choice.SelectedPlayers.Count * choice.SurvivalRate);
-                var survivors = choice.SelectedPlayers.Take(survivorCount).ToList();
-
-                choiceStat.SurvivorCount = survivorCount;
-                choiceStat.ActualSurvivalRate = choice.SelectedPlayers.Count > 0
-                    ? (float)survivorCount / choice.SelectedPlayers.Count
-                    : 0;
-
-                gameResult.Survivors.AddRange(survivors);
-
-                var eliminated = choice.SelectedPlayers.Skip(survivorCount).ToList();
-                gameResult.Eliminated.AddRange(eliminated);
-
-                gameResult.ChoiceStats[choice.Id] = choiceStat;
-            }
-
-            gameResult.CalculateSurvivalRate();
-
-            if (_playerSelectionTimes.Count > 0)
-            {
-                var avgTime = _playerSelectionTimes.Values.Average(t => (DateTime.Now - t).TotalSeconds);
-                gameResult.AverageSelectionTime = (float)avgTime;
-            }
-
-            // 점수 계산
-            if (scoreService != null)
-            {
-                scoreService.CalculateSurvivalScores(gameResult.Survivors);
-
-                foreach (var kvp in _playerSelectionTimes)
-                {
-                    var playerId = kvp.Key;
-                    var selectionTime = (float)(DateTime.Now - kvp.Value).TotalSeconds;
-                    scoreService.CalculateSpeedBonus(playerId, selectionTime, _gameData.InputTimeLimit);
-                }
-
-                var majorityChoice = _gameData.Choices.OrderByDescending(c => c.SelectedPlayers.Count).FirstOrDefault();
-                if (majorityChoice != null)
-                {
-                    scoreService.CalculateMajorityBonus(majorityChoice.SelectedPlayers);
-                }
-            }
-
-            GLog.Info($"[Trolley] Results - Survivors: {gameResult.Survivors.Count}, Eliminated: {gameResult.Eliminated.Count}");
-
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// REVEAL Phase: 결과 연출
-        /// </summary>
-        public async Task OnRevealAsync(GameState state)
-        {
-            var gameResult = state.ResultData as TrolleyGameResult;
-            if (gameResult == null)
-            {
-                GLog.Error("[Trolley✗] GameResult not found");
-                return;
-            }
-
-            var uiService = state.GetService<TrolleyUIService>();
-            var scoreService = state.GetService<TrolleyScoreService>();
-
-            uiService?.ShowResult(gameResult);
-            scoreService?.PrintRanking(state);
-
-            GLog.Info($"[Trolley] Survival rate: {gameResult.SurvivalRate:P1}");
-
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// CLEANUP Phase: 정리
-        /// </summary>
-        public async Task OnCleanupAsync(GameState state)
-        {
-            var gameResult = state.ResultData as TrolleyGameResult;
-            if (gameResult != null)
-            {
-                gameResult.EndTime = UnityEngine.Time.time;
-                gameResult.CalculateTotalPlayTime();
-            }
-
-            var uiService = state.GetService<TrolleyUIService>();
-            var timerService = state.GetService<TrolleyTimerService>();
-
-            uiService?.Clear();
-            timerService?.Reset();
-
-            _gameData = null;
-            _playerSelectionTimes.Clear();
-
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Phase 전환 콜백
-        /// </summary>
-        public async Task OnPhaseTransitionAsync(GamePhase from, GamePhase to)
-        {
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// 플레이어 선택 등록 (외부에서 호출)
-        /// </summary>
-        public void RegisterPlayerChoice(string playerId, string choiceId)
-        {
-            var choice = _gameData.Choices.FirstOrDefault(c => c.Id == choiceId);
+            var choice = TrolleyRules.ParseChoice(input.Message, Data.Choices);
             if (choice == null)
             {
-                GLog.Warn($"[Trolley⚠] Invalid choice: {choiceId}");
                 return;
             }
 
-            foreach (var c in _gameData.Choices)
+            _votes[input.PlayerId] = choice;
+            View?.SetVote(input.PlayerId, choice);
+            View?.SetVoteCount(_votes.Count, Participants.Count);
+        }
+
+        protected override Task OnWait()
+        {
+            View?.SetInputOpen(false);
+            AssignMissingVotes();
+
+            // 무한 대기(phase_data WAIT -1): 호스트가 고를 때까지 기다린다. 이미 골랐으면 마감 연출 시간만 보여 준다
+            if (State.IsInfinitePhase)
             {
-                c.SelectedPlayers.Remove(playerId);
+                var elapsed = System.Diagnostics.Stopwatch.StartNew();
+                CompletePhaseWhen(() => _hostChoice != null && elapsed.Elapsed.TotalSeconds >= MinimumWaitSeconds);
             }
-
-            choice.SelectedPlayers.Add(playerId);
-            _playerSelectionTimes[playerId] = DateTime.Now;
-
-            GLog.Debug($"[Trolley] Player {playerId} → {choice.Text}");
+            return Task.CompletedTask;
         }
 
         /// <summary>
-        /// 게임 결과 가져오기
-        /// ⚠️ 이제 GameState.ResultData에서 관리됨
+        /// 입력 마감: 입력하지 않은 참가자에게 1·2 중 하나를 자동으로 배정한다 (rule.noInput = random)
         /// </summary>
-        public TrolleyGameResult GetResult()
+        private void AssignMissingVotes()
         {
-            if (RGFManager.Instance != null)
+            if (Data.Rule?.NoInput != TrolleyRule.Random)
             {
-                return RGFManager.Instance.State.ResultData as TrolleyGameResult;
+                return;
             }
 
-            GLog.Warn("[Trolley⚠] RGFManager not initialized");
-            return null;
+            foreach (var playerId in Participants)
+            {
+                if (_votes.ContainsKey(playerId))
+                {
+                    continue;
+                }
+
+                var choice = Data.Choices[_random.Next(Data.Choices.Count)].Id;
+                _votes[playerId] = choice;
+                _autoAssigned.Add(playerId);
+                View?.SetVote(playerId, choice, auto: true);
+            }
+
+            if (_autoAssigned.Count > 0)
+            {
+                View?.SetVoteCount(_votes.Count, Participants.Count);
+                GLog.Info($"[Trolley] {_autoAssigned.Count}명 자동 선택");
+            }
+        }
+
+        /// <summary>
+        /// 호스트 선택 입력. PRESENT~WAIT 동안만 받고, 다시 보내면 바꾼다.
+        /// 외부(향후 Trolley_HostChoice 메시지)에서도 호출할 수 있다.
+        /// </summary>
+        /// <returns>받아들였으면 true</returns>
+        public bool SubmitHostChoice(string choiceId)
+        {
+            if (State == null || Data == null ||
+                (State.CurrentPhase != GamePhase.PRESENT && State.CurrentPhase != GamePhase.INPUT && State.CurrentPhase != GamePhase.WAIT))
+            {
+                return false;
+            }
+
+            var choice = TrolleyRules.ParseHostChoice(choiceId, Data.Choices);
+            if (choice == null)
+            {
+                return false;
+            }
+
+            _hostChoice = choice;
+            View?.SetHostReady(true);
+            GLog.Debug("[Trolley] Host choice received");
+            return true;
+        }
+
+        /// <summary>
+        /// React 호스트 입력: command "choice", value = 선택지 ID 또는 번호
+        /// </summary>
+        protected override bool OnHostInput(HostInput input)
+        {
+            return input.Command == "choice" && SubmitHostChoice(input.Value);
+        }
+
+        private void OnHostKey(int choiceNumber)
+        {
+            SubmitHostChoice(choiceNumber.ToString());
+        }
+
+        protected override Task OnExecute()
+        {
+            // 입력 마감: 호스트 선택 확정
+            CloseHostPrompt();
+            string source = TrolleyRules.HostSource;
+            if (_hostChoice == null)
+            {
+                if (Data.Rule.HostChoiceIfMissing == TrolleyRule.Abort)
+                {
+                    throw new InvalidOperationException("[Trolley✗] Host did not choose (rule: abort)");
+                }
+
+                _hostChoice = Data.Choices[_random.Next(Data.Choices.Count)].Id;
+                source = TrolleyRules.RandomSource;
+            }
+
+            var result = TrolleyRules.Judge(Data, Participants, _votes, _hostChoice, source, _autoAssigned);
+            result.RoundNumber = State.CurrentRound;
+            State.ResultData = result;
+
+            foreach (var r in result.Results)
+            {
+                SetSurvived(r.ParticipantId, r.Survived);
+            }
+
+            GLog.Info($"[Trolley] Host {_hostChoice}({source}) - Survivors {result.Survivors.Count}, Eliminated {result.Eliminated.Count}");
+            return Task.CompletedTask;
+        }
+
+        protected override Task OnReveal()
+        {
+            if (State.ResultData is TrolleyGameResult result)
+            {
+                View?.PlayReveal(result, State.PhaseDuration);
+            }
+            return Task.CompletedTask;
+        }
+
+        protected override Task OnCleanup()
+        {
+            _votes.Clear();
+            _autoAssigned.Clear();
+            _hostChoice = null;
+            return Task.CompletedTask;
+        }
+
+        protected override void OnAborted()
+        {
+            _votes.Clear();
+            _autoAssigned.Clear();
+            _hostChoice = null;
         }
     }
 }

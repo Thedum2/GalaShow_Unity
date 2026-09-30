@@ -51,9 +51,19 @@ namespace Galashow.Bridge
             NTY("RoundStarted", new Notify.U2R.RGFRoundStarted(roundNumber, miniGamePluginIdx, gameName));
         }
 
-        public void RoundCompleted(int roundNumber, string miniGamePluginIdx, string gameName, Notify.U2R.RoundResult result)
+        public void RoundCompleted(int roundNumber, string miniGamePluginIdx, string gameName, Notify.U2R.RoundResult result, bool practice = false)
         {
-            NTY("RoundCompleted", new Notify.U2R.RGFRoundCompleted(roundNumber, miniGamePluginIdx, gameName, result));
+            NTY("RoundCompleted", new Notify.U2R.RGFRoundCompleted(roundNumber, miniGamePluginIdx, gameName, result) { Practice = practice });
+        }
+
+        public void PromptOpened(Notify.U2R.RGFPromptOpened prompt)
+        {
+            NTY("PromptOpened", prompt);
+        }
+
+        public void PromptClosed(int roundNumber, string promptId)
+        {
+            NTY("PromptClosed", new Notify.U2R.RGFPromptClosed { RoundNumber = roundNumber, PromptId = promptId });
         }
 
         #endregion
@@ -73,6 +83,16 @@ namespace Galashow.Bridge
                         return;
                     }
                     _ports.ForEach(p => p.R2U_RGFManager_ChatInput_NTY(req));
+                }
+                    break;
+                case "HostInput":
+                {
+                    if (!Util.TryTo<Notify.R2U.RGFHostInput>(message.data, out var req, out var err))
+                    {
+                        GLog.Debug($"[RGFHandler] HostInput NTY bad payload: {err}");
+                        return;
+                    }
+                    _ports.ForEach(p => p.R2U_RGFManager_HostInput_NTY(req));
                 }
                     break;
                 default:

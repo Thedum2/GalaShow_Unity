@@ -31,6 +31,11 @@ namespace Galashow.RGF
         public int CurrentRound { get; set; }
 
         /// <summary>
+        /// 연습 라운드 여부. 연습이면 판정 결과를 참가자 생존 상태에 반영하지 않는다.
+        /// </summary>
+        public bool IsPractice { get; set; }
+
+        /// <summary>
         /// 현재 게임 데이터 (라운드별 설정, 문제 등)
         /// </summary>
         public object GameData { get; set; }
@@ -61,9 +66,24 @@ namespace Galashow.RGF
         public float PhaseStartTime { get; set; }
 
         /// <summary>
-        /// Phase 지속 시간 (초)
+        /// Phase 지속 시간 (초). 음수(-1)면 무한 대기: 플러그인이 완료 조건을 채울 때까지 기다린다.
         /// </summary>
         public float PhaseDuration { get; set; }
+
+        /// <summary>
+        /// 무한 대기 단계 값 (phase_data -1)
+        /// </summary>
+        public const float InfiniteDuration = -1f;
+
+        /// <summary>
+        /// 현재 Phase가 무한 대기인지
+        /// </summary>
+        public bool IsInfinitePhase => PhaseDuration < 0f;
+
+        /// <summary>
+        /// 현재 Phase 완료 조건. 참이 되면 남은 시간과 상관없이 다음 Phase로 넘어간다 (Phase 시작 때 비운다)
+        /// </summary>
+        public Func<bool> PhaseCompleteCondition { get; set; }
 
         /// <summary>
         /// 취소 토큰 (Phase 전환 시 작업 취소용)
@@ -180,7 +200,7 @@ namespace Galashow.RGF
         /// <summary>
         /// 플레이어 추가
         /// </summary>
-        public void AddPlayer(string playerId, string playerName)
+        public void AddPlayer(string playerId, string playerName, string avatarName = null)
         {
             if (!Players.ContainsKey(playerId))
             {
@@ -188,6 +208,7 @@ namespace Galashow.RGF
                 {
                     Id = playerId,
                     Name = playerName,
+                    AvatarName = avatarName,
                     IsAlive = true,
                     Score = 0
                 };
@@ -260,6 +281,12 @@ namespace Galashow.RGF
     {
         public string Id { get; set; }
         public string Name { get; set; }
+
+        /// <summary>
+        /// 캐릭터 이름 (Admin viewer_avatars.name). 없으면 게임이 대체 캐릭터를 쓴다.
+        /// </summary>
+        public string AvatarName { get; set; }
+
         public bool IsAlive { get; set; }
         public int Score { get; set; }
         public Dictionary<string, object> CustomData { get; set; } = new Dictionary<string, object>();

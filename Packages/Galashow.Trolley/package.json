@@ -2,9 +2,14 @@
   "name": "com.galashow.trolley",
   "version": "0.1.0",
   "displayName": "Galashow Trolley",
-  "description": "Individual scenario (controller/resource/production preset) for Galashow",
+  "description": "트롤리 딜레마 미니게임 (plugin id: galashow.trolley)",
   "unity": "6000.3",
+  "keywords": [
+    "galashow",
+    "minigame"
+  ],
   "dependencies": {
+    "com.galashow.core": "0.1.0",
     "com.galashow.rgf": "0.1.0",
     "com.galashow.common": "0.1.0"
   }

@@ -27,5 +27,7 @@ namespace Galashow.Bridge
             Action<string> onError);
 
         void R2U_RGFManager_ChatInput_NTY(Notify.R2U.RGFChatInput data);
+
+        void R2U_RGFManager_HostInput_NTY(Notify.R2U.RGFHostInput data);
     }
 }

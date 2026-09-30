@@ -1,136 +1,159 @@
 using System.Collections.Generic;
-using Galashow.Core;
+using Newtonsoft.Json;
 using Galashow.RGF;
 
 namespace Galashow.Trolley
 {
     /// <summary>
-    /// 트롤리 딜레마 게임 데이터
+    /// 트롤리 딜레마 라운드 데이터 (StartRound gameData, docs/minigame-trolley.md 6.1)
     /// </summary>
     public class TrolleyGameData
     {
-        /// <summary>
-        /// 라운드 번호
-        /// </summary>
+        [JsonProperty("roundNumber")]
         public int RoundNumber { get; set; }
 
         /// <summary>
-        /// 딜레마 제목
+        /// 딜레마 ID (결과 기록용, 바꾸지 않음)
         /// </summary>
+        [JsonProperty("dilemmaId")]
+        public string DilemmaId { get; set; }
+
+        [JsonProperty("title")]
         public string Title { get; set; }
 
-        /// <summary>
-        /// 딜레마 설명
-        /// </summary>
+        [JsonProperty("description")]
         public string Description { get; set; }
 
         /// <summary>
-        /// 선택지 목록
+        /// 선택지. 현재 화면·입력은 2개(A/B)를 기준으로 한다.
         /// </summary>
+        [JsonProperty("choices")]
         public List<TrolleyChoice> Choices { get; set; } = new List<TrolleyChoice>();
 
         /// <summary>
-        /// 입력 제한 시간 (초)
+        /// 입력 시간(ms). 0 이하면 StartRound phaseDuration.INPUT을 그대로 쓴다.
         /// </summary>
-        public float InputTimeLimit { get; set; } = 5f;
+        [JsonProperty("inputTimeLimitMs")]
+        public int InputTimeLimitMs { get; set; }
 
         /// <summary>
-        /// 난이도
+        /// 판정 정책. 생략하면 기획 문서 4.2의 예시 값 (PRD 미정 사항)
         /// </summary>
-        public string Difficulty { get; set; } = "normal";
-
-        /// <summary>
-        /// 정답 선택지 인덱스 (-1이면 정답 없음)
-        /// </summary>
-        public int CorrectChoiceIndex { get; set; } = -1;
+        [JsonProperty("rule")]
+        public TrolleyRule Rule { get; set; } = new TrolleyRule();
     }
 
     /// <summary>
-    /// 트롤리 선택지
+    /// 선택지
     /// </summary>
     public class TrolleyChoice
     {
         /// <summary>
-        /// 선택지 ID
+        /// "A" / "B". minigame_controls.key_name과 같다.
         /// </summary>
+        [JsonProperty("id")]
         public string Id { get; set; }
 
-        /// <summary>
-        /// 선택지 텍스트
-        /// </summary>
-        public string Text { get; set; }
+        [JsonProperty("label")]
+        public string Label { get; set; }
 
-        /// <summary>
-        /// 선택지 설명
-        /// </summary>
+        [JsonProperty("description")]
         public string Description { get; set; }
-
-        /// <summary>
-        /// 선택지 아이콘/이미지 경로
-        /// </summary>
-        public string IconPath { get; set; }
-
-        /// <summary>
-        /// 생존율 (0~1)
-        /// </summary>
-        public float SurvivalRate { get; set; } = 0.5f;
-
-        /// <summary>
-        /// 이 선택지를 선택한 플레이어 ID 목록
-        /// </summary>
-        public List<string> SelectedPlayers { get; set; } = new List<string>();
     }
 
     /// <summary>
-    /// 트롤리 게임 결과
-    /// GameResult를 상속받아 트롤리 게임 전용 데이터 추가
+    /// 판정 정책 (docs/minigame-trolley.md 4.2 rule). 값은 예시이며 PRD에서 미정이다.
+    /// </summary>
+    public class TrolleyRule
+    {
+        public const string Eliminate = "eliminate";
+        public const string Survive = "survive";
+        public const string AllSurvive = "all_survive";
+        public const string AllEliminated = "all_eliminated";
+        public const string Random = "random";
+        public const string Abort = "abort";
+
+        /// <summary>
+        /// 입력하지 않은 참가자: random(입력 마감 때 1·2 중 자동 선택, 기본) / eliminate(탈락) / survive(생존)
+        /// </summary>
+        [JsonProperty("noInput")]
+        public string NoInput { get; set; } = Random;
+
+        /// <summary>
+        /// 전원이 틀렸을 때: all_survive(전원 생존) / all_eliminated(그대로 전원 탈락)
+        /// </summary>
+        [JsonProperty("allEliminated")]
+        public string AllEliminatedPolicy { get; set; } = AllSurvive;
+
+        /// <summary>
+        /// 입력 마감까지 호스트가 고르지 않았을 때: random / abort
+        /// </summary>
+        [JsonProperty("hostChoiceIfMissing")]
+        public string HostChoiceIfMissing { get; set; } = Random;
+    }
+
+    /// <summary>
+    /// 참가자별 판정 (docs/minigame-trolley.md 7절)
+    /// </summary>
+    public class TrolleyPlayerResult
+    {
+        public string ParticipantId { get; set; }
+
+        /// <summary>
+        /// 선택지 ID. 미입력이면 null
+        /// </summary>
+        public string Choice { get; set; }
+
+        /// <summary>
+        /// 입력하지 않아 자동으로 고른 선택인지
+        /// </summary>
+        public bool AutoAssigned { get; set; }
+
+        public bool Survived { get; set; }
+
+        public string Reason { get; set; }
+    }
+
+    /// <summary>
+    /// 트롤리 라운드 결과 (GameState.ResultData)
     /// </summary>
     public class TrolleyGameResult : GameResult
     {
-        /// <summary>
-        /// 선택지별 통계
-        /// </summary>
-        public Dictionary<string, ChoiceStatistics> ChoiceStats { get; set; } = new Dictionary<string, ChoiceStatistics>();
+        public string DilemmaId { get; set; }
+
+        public string HostChoice { get; set; }
 
         /// <summary>
-        /// 평균 선택 시간 (초)
+        /// 호스트 선택의 화면 번호 (1부터, 시청자가 채팅한 번호)
         /// </summary>
-        public float AverageSelectionTime { get; set; }
+        public int HostChoiceNumber { get; set; }
 
         /// <summary>
-        /// 결과 초기화 (오버라이드)
+        /// host(호스트 직접 선택) / random(미선택으로 무작위 결정)
         /// </summary>
+        public string HostChoiceSource { get; set; }
+
+        /// <summary>
+        /// 선택지 ID별 인원. 미입력은 "none"
+        /// </summary>
+        public Dictionary<string, int> Distribution { get; set; } = new Dictionary<string, int>();
+
+        public List<TrolleyPlayerResult> Results { get; set; } = new List<TrolleyPlayerResult>();
+
+        /// <summary>
+        /// 전원 탈락이라 정책(all_survive)에 따라 전원 생존 처리했는지
+        /// </summary>
+        public bool RescuedAllEliminated { get; set; }
+
         public override void Reset()
         {
             base.Reset();
-            ChoiceStats.Clear();
-            AverageSelectionTime = 0;
+            DilemmaId = null;
+            HostChoice = null;
+            HostChoiceSource = null;
+            Distribution.Clear();
+            Results.Clear();
+            RescuedAllEliminated = false;
         }
-    }
-
-    /// <summary>
-    /// 선택지 통계
-    /// </summary>
-    public class ChoiceStatistics
-    {
-        /// <summary>
-        /// 선택한 플레이어 수
-        /// </summary>
-        public int SelectionCount { get; set; }
-
-        /// <summary>
-        /// 선택 비율 (0~1)
-        /// </summary>
-        public float SelectionRate { get; set; }
-
-        /// <summary>
-        /// 이 선택지를 선택한 플레이어 중 생존자 수
-        /// </summary>
-        public int SurvivorCount { get; set; }
-
-        /// <summary>
-        /// 이 선택지의 실제 생존율
-        /// </summary>
-        public float ActualSurvivalRate { get; set; }
     }
 }

@@ -26,6 +26,11 @@ namespace Galashow.RGF
         public event Action<GamePhase> OnPhaseEnded;
 
         /// <summary>
+        /// 현재 라운드 중단 요청 여부. 남은 대기와 다음 Phase를 건너뛴다.
+        /// </summary>
+        public bool IsAborted { get; private set; }
+
+        /// <summary>
         /// 코루틴 실행을 위한 MonoBehaviour 설정
         /// </summary>
         public void SetCoroutineRunner(MonoBehaviour runner)
@@ -65,6 +70,7 @@ namespace Galashow.RGF
             state.TransitPhase(phase);
             state.PhaseStartTime = Time.time;
             state.PhaseDuration = state.GetPhaseDuration(phase);
+            state.PhaseCompleteCondition = null;
 
             OnPhaseStarted?.Invoke(phase);
 
@@ -88,6 +94,13 @@ namespace Galashow.RGF
                 yield break;
             }
 
+            if (IsAborted)
+            {
+                OnPhaseEnded?.Invoke(phase);
+                tcs.TrySetResult(false);
+                yield break;
+            }
+
             // Phase별 플러그인 메서드 호출
             var phaseTask = ExecutePhaseMethodAsync(phase, plugin, state);
             yield return new WaitUntil(() => phaseTask.IsCompleted);
@@ -100,11 +113,12 @@ namespace Galashow.RGF
                 yield break;
             }
 
-            // Phase 지속 시간 대기
-            if (state.PhaseDuration > 0)
+            // Phase 지속 시간 대기. 무한(음수)이면 완료 조건이 채워질 때까지, 시간이 있으면 시간 또는 완료 조건까지
+            bool infinite = state.PhaseDuration < 0f;
+            if (infinite || state.PhaseDuration > 0)
             {
                 float endTime = Time.time + state.PhaseDuration;
-                while (Time.time < endTime)
+                while (!IsAborted && (infinite || Time.time < endTime) && !IsPhaseComplete(state))
                 {
                     yield return null;
                 }
@@ -112,6 +126,19 @@ namespace Galashow.RGF
 
             OnPhaseEnded?.Invoke(phase);
             tcs.TrySetResult(true);
+        }
+
+        static bool IsPhaseComplete(GameState state)
+        {
+            try
+            {
+                return state.PhaseCompleteCondition != null && state.PhaseCompleteCondition();
+            }
+            catch (Exception e)
+            {
+                GLog.Error($"[RGF✗] Phase complete condition error: {e.Message}");
+                return true;
+            }
         }
 
         /// <summary>
@@ -148,19 +175,28 @@ namespace Galashow.RGF
             }
         }
 
+        private static readonly GamePhase[] RoundPhases =
+        {
+            GamePhase.READY, GamePhase.SETUP, GamePhase.PRESENT, GamePhase.INPUT,
+            GamePhase.WAIT, GamePhase.EXECUTE, GamePhase.REVEAL, GamePhase.CLEANUP
+        };
+
         /// <summary>
         /// 전체 라운드 8단계 실행
         /// </summary>
-        public async Task ExecuteFullRoundAsync(IGamePlugin plugin, GameState state)
+        /// <returns>8단계를 모두 마쳤으면 true, 중단되었으면 false</returns>
+        public async Task<bool> ExecuteFullRoundAsync(IGamePlugin plugin, GameState state)
         {
-            await ExecuteAsync(GamePhase.READY, plugin, state);
-            await ExecuteAsync(GamePhase.SETUP, plugin, state);
-            await ExecuteAsync(GamePhase.PRESENT, plugin, state);
-            await ExecuteAsync(GamePhase.INPUT, plugin, state);
-            await ExecuteAsync(GamePhase.WAIT, plugin, state);
-            await ExecuteAsync(GamePhase.EXECUTE, plugin, state);
-            await ExecuteAsync(GamePhase.REVEAL, plugin, state);
-            await ExecuteAsync(GamePhase.CLEANUP, plugin, state);
+            IsAborted = false;
+            foreach (var phase in RoundPhases)
+            {
+                await ExecuteAsync(phase, plugin, state);
+                if (IsAborted)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         /// <summary>
@@ -168,6 +204,7 @@ namespace Galashow.RGF
         /// </summary>
         public void Abort(GameState state)
         {
+            IsAborted = true;
             if (state.CancellationToken != null)
             {
                 TaskRunner.Instance.CancelAll(state.CancellationToken);
